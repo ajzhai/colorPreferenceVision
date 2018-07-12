@@ -11,14 +11,13 @@ TODO: how to make sure least-favorite blue can get in equiluminance range of mos
 PATH_TO_MONDRIANS = 'Mondrians/newColors/'
 PATH_TO_STIMULI = 'ColorStimuli/'
 OUTPUT_FILE = open('colorPrefData/test1.txt', 'a')
-CENTER_DIST = 0.5  # positive for right-eye dominant, negative for left-eye dominant
+CENTER_DIST = 0.4  # positive for right-eye dominant, negative for left-eye dominant
 YPOS = 0.1
 TEXT_SIZE = 0.038
 REFRESH_RATE = 60  # in Hz
-FIRST_STAGE_REPETITIONS = 0 # per color
+FIRST_STAGE_REPETITIONS = 1 # per color
 SECOND_STAGE_REPETITIONS = 1  # per layout 
-colorsToTest = [(128, 0, 0), (128, 64, 0), (128, 128, 0),
-                (0, 128, 0), (0, 0, 128), (128, 0, 128)]
+colorsToTest = [(64, 0, 0), (64, 32, 0), (64, 64, 0), (0, 64, 0), (0, 0, 64), (64, 0, 64)]
                 
 # All possible trial configurations for second experiment
 layouts = []
@@ -58,9 +57,13 @@ mond1 = visual.ImageStim(win, size=(0.08, 0.0675 * ASPECT_RATIO), pos=(CENTER_DI
                          image=PATH_TO_MONDRIANS + '01.jpg')
 mond2 = visual.ImageStim(win, size=(0.08, 0.0675 * ASPECT_RATIO), pos=(CENTER_DIST, YPOS),
                          image=PATH_TO_MONDRIANS + '01.jpg')
-stim = visual.ImageStim(win, size=(0.045, 0.045 * ASPECT_RATIO), pos=(-CENTER_DIST, YPOS), 
-                        image=PATH_TO_STIMULI + str(colorsToTest[0]) + '.png')
-                        
+#stim = visual.ImageStim(win, size=(0.018, 0.018 * ASPECT_RATIO), pos=(-CENTER_DIST, YPOS), 
+ #                       image=PATH_TO_STIMULI + str(colorsToTest[0]) + '.png')
+stim = visual.Circle(win, size=(0.018, 0.018 * ASPECT_RATIO), pos=(-CENTER_DIST, YPOS),
+                     lineColorSpace='rgb255', fillColorSpace='rgb255')
+crossLineV = visual.Rect(win, size=(0.001, 0.1 * ASPECT_RATIO), pos=(-CENTER_DIST, YPOS), lineColor='black', fillColor='black') 
+crossLineH = visual.Rect(win, size=(0.1, 0.001 * ASPECT_RATIO), pos=(-CENTER_DIST, YPOS), lineColor='black', fillColor='black') 
+                       
 # Suppressed Priming Ring of Crosses
 ringXY = []
 for ang in np.arange(0.75, 2.75, .25):
@@ -79,7 +82,7 @@ for y in range(256):
         val2 = np.sin((x + hCenter) * 2.0 * np.pi / 256 * 6)
         tex1[y][x] = (val1, val1, val1)
         tex2[y][x] = (val2, val2, val2)
-gabor = visual.GratingStim(win, mask="gauss", size=[0.045, 0.045 * ASPECT_RATIO])
+gabor = visual.GratingStim(win, mask="gauss", size=[0.024, 0.024 * ASPECT_RATIO])
                                       
 # Location Task Text
 questionL = visual.TextStim(win, pos=(-CENTER_DIST, 0.14 + YPOS), height=TEXT_SIZE, wrapWidth=0.23,
@@ -102,7 +105,7 @@ circles = {}
 ranks = {}
 for i, color in enumerate(colorsToTest):
     hPos = (i - (len(colorsToTest) - 1) / 2.0) * 0.1
-    circles[color] = visual.ImageStim(win, size=(0.045, 0.045 * ASPECT_RATIO), pos=(hPos, 0.2),
+    circles[color] = visual.ImageStim(win, size=(0.018, 0.018 * ASPECT_RATIO), pos=(hPos, 0.2),
                                       image=PATH_TO_STIMULI + str(color) + '.png')
     ranks[color] = visual.TextStim(win, height=TEXT_SIZE, pos=(hPos, 0.12), text='_')
 indicator = visual.Rect(win, lineColor='white', fillColor='black', size=(0.12, 0.225 * ASPECT_RATIO), 
@@ -179,8 +182,12 @@ def circleBreakingTime(color, askLocation, blinking):
     loc = (np.random.randint(0, 2) - 0.5) / 8 # relative to center of box
     mond1.pos =  (CENTER_DIST + loc, YPOS)
     mond2.pos = (CENTER_DIST - loc, YPOS)
-    stim.image = PATH_TO_STIMULI + str(color) + '.png'
+    #stim.image = PATH_TO_STIMULI + str(color) + '.png'
+    stim.lineColor = color
+    stim.fillColor = color
     stim.pos = (-CENTER_DIST + loc, YPOS)
+    crossLineH.pos = (-CENTER_DIST + loc, YPOS)
+    crossLineV.pos = (-CENTER_DIST + loc, YPOS)
     waitForReady(False)
     fixTime = np.random.randint(0, REFRESH_RATE)
     for frameN in range(fixTime):
@@ -188,7 +195,11 @@ def circleBreakingTime(color, askLocation, blinking):
         win.flip()
     mondN = 0
     startTime = time.time()
-    for frameN in range(int(10.8 * REFRESH_RATE)):  # want to allow up to 10 seconds, last display is for finding bad subjects 
+    for frameN in range(int(10.8 * REFRESH_RATE)):  # want to allow up to 10 seconds, last display is for finding bad subjects
+        if frameN <= 6 * REFRESH_RATE:
+            relContrast = frameN / (6.0 * REFRESH_RATE)
+            stim.lineColor = (color[0] * relContrast, color[1] * relContrast, color[2] * relContrast)
+            stim.fillColor = stim.lineColor
         drawBackground()
         if int(frameN % (REFRESH_RATE / 10.0)) == 0:  # change mondrian 10 times per second
             mondN += 1
@@ -203,8 +214,12 @@ def circleBreakingTime(color, askLocation, blinking):
                     mond2.draw()
                 if frameN % int(REFRESH_RATE * 0.6) >= 2 and frameN % int(REFRESH_RATE * 0.6) < REFRESH_RATE / 3.0 + 2:
                     stim.draw()
+                    crossLineH.draw()
+                    crossLineV.draw()
         else:
             stim.draw()
+            crossLineH.draw()
+            crossLineV.draw()
             if frameN < 10 * REFRESH_RATE:
                 mond1.draw()
                 mond2.draw()
@@ -293,7 +308,7 @@ def equiluminance(color1, color2):
                 indicator.pos = ((scaleFactor - 1.0) * 0.3, -0.2)
             temp2 = (int(color2[0] * scaleFactor), int(color2[1] * scaleFactor), int(color2[2] * scaleFactor))
         elif input and input[0] == 'right':
-            if scaleFactor < 1.96:
+            if scaleFactor < 3.96:
                 scaleFactor += 0.04
                 indicator.pos = ((scaleFactor - 1.0) * 0.3, -0.2)
             temp2 = (int(color2[0] * scaleFactor), int(color2[1] * scaleFactor), int(color2[2] * scaleFactor))
@@ -313,7 +328,10 @@ def ringPrime(stimColor, ringColor, popLoc):
     mond1.pos = (CENTER_DIST, YPOS)
     stim.size = (0.018, 0.018 * ASPECT_RATIO)  # reusing same stim object from first experiment
     stim.pos = (-CENTER_DIST, YPOS + popLoc)
-    stim.image = PATH_TO_STIMULI + str(stimColor) + '.png'
+    crossLineH.pos = (-CENTER_DIST, YPOS + popLoc)
+    crossLineV.pos = (-CENTER_DIST, YPOS + popLoc)
+    stim.fillColor = stimColor
+    stim.lineColor = stimColor
     primingRing.elementTex = PATH_TO_STIMULI + str(ringColor) + '.png'
     mondN = 0
     for frameN in range(REFRESH_RATE):
@@ -326,6 +344,8 @@ def ringPrime(stimColor, ringColor, popLoc):
         primingRing.draw()
         mond1.draw()
         stim.draw()
+        crossLineH.draw()
+        crossLineV.draw()
         if event.getKeys(keyList=['space']):
             event.clearEvents()
             return True
