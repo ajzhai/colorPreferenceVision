@@ -13,11 +13,12 @@ PATH_TO_STIMULI = 'ColorStimuli/'
 OUTPUT_FILE = open('colorPrefData/test1.txt', 'a')
 CENTER_DIST = 0.4  # positive for right-eye dominant, negative for left-eye dominant
 YPOS = 0.1
+LEFT_SHIFT = 0.055
 TEXT_SIZE = 0.038
 REFRESH_RATE = 60  # in Hz
-FIRST_STAGE_REPETITIONS = 1 # per color
-SECOND_STAGE_REPETITIONS = 1  # per layout 
-colorsToTest = [(64, 0, 0), (64, 32, 0), (64, 64, 0), (0, 64, 0), (0, 0, 64), (64, 0, 64)]
+FIRST_STAGE_REPETITIONS = 0 # per color
+SECOND_STAGE_REPETITIONS = 2  # per layout 
+colorsToTest = [(4, 0, 0), (4, 2, 0), (4, 4, 0), (0, 4, 0), (0, 0, 4), (4, 0, 4)]
                 
 # All possible trial configurations for second experiment
 layouts = []
@@ -34,18 +35,18 @@ ASPECT_RATIO = float(win.size[0]) / win.size[1]
 
 # Background                      
 leftFix = visual.Circle(win, lineColor='white', fillColor='white', 
-                        size=(0.0045, 0.0045 * ASPECT_RATIO), pos=(-CENTER_DIST, YPOS))
+                        size=(0.0045, 0.0045 * ASPECT_RATIO), pos=(-CENTER_DIST, YPOS + LEFT_SHIFT))
 rightFix = visual.Circle(win, lineColor='white', fillColor='white', 
                          size=(0.0045, 0.0045 * ASPECT_RATIO), pos=(CENTER_DIST, YPOS))
 leftBox = visual.Rect(win, lineColor='white', fillColor='black', 
-                      size=(0.54, 0.54 * ASPECT_RATIO), pos=(-CENTER_DIST, YPOS))
+                      size=(0.54, 0.54 * ASPECT_RATIO), pos=(-CENTER_DIST, YPOS + LEFT_SHIFT))
 rightBox = visual.Rect(win, lineColor='white', fillColor='black', 
                        size=(0.54, 0.54 * ASPECT_RATIO), pos=(CENTER_DIST, YPOS))
 
 # Instructions
-instructL1 = visual.TextStim(win, pos=(-CENTER_DIST, 0.14 + YPOS), height=TEXT_SIZE, wrapWidth=0.23,
+instructL1 = visual.TextStim(win, pos=(-CENTER_DIST, 0.14 + YPOS + LEFT_SHIFT), height=TEXT_SIZE, wrapWidth=0.23,
                              text='Hit space when ready.')
-instructL2 = visual.TextStim(win, pos=(-CENTER_DIST, -0.12 + YPOS), height=TEXT_SIZE, wrapWidth=0.23,
+instructL2 = visual.TextStim(win, pos=(-CENTER_DIST, -0.12 + YPOS + LEFT_SHIFT), height=TEXT_SIZE, wrapWidth=0.23,
                              text='Then, press space again when you see a colored dot.')
 instructR1 = visual.TextStim(win, pos=(CENTER_DIST, 0.14 + YPOS), height=TEXT_SIZE, wrapWidth=0.23,
                              text='Hit space when ready.')
@@ -59,24 +60,27 @@ mond2 = visual.ImageStim(win, size=(0.08, 0.0675 * ASPECT_RATIO), pos=(CENTER_DI
                          image=PATH_TO_MONDRIANS + '01.jpg')
 #stim = visual.ImageStim(win, size=(0.018, 0.018 * ASPECT_RATIO), pos=(-CENTER_DIST, YPOS), 
  #                       image=PATH_TO_STIMULI + str(colorsToTest[0]) + '.png')
-stim = visual.Circle(win, size=(0.018, 0.018 * ASPECT_RATIO), pos=(-CENTER_DIST, YPOS),
+stim = visual.Circle(win, size=(0.018, 0.018 * ASPECT_RATIO), pos=(-CENTER_DIST, YPOS + LEFT_SHIFT),
                      lineColorSpace='rgb255', fillColorSpace='rgb255')
-crossLineV = visual.Rect(win, size=(0.001, 0.1 * ASPECT_RATIO), pos=(-CENTER_DIST, YPOS), lineColor='black', fillColor='black') 
-crossLineH = visual.Rect(win, size=(0.1, 0.001 * ASPECT_RATIO), pos=(-CENTER_DIST, YPOS), lineColor='black', fillColor='black') 
+crossLineV = visual.Rect(win, size=(0.001, 0.1 * ASPECT_RATIO), pos=(-CENTER_DIST, YPOS + LEFT_SHIFT), lineColor='black', fillColor='black') 
+crossLineH = visual.Rect(win, size=(0.1, 0.001 * ASPECT_RATIO), pos=(-CENTER_DIST, YPOS + LEFT_SHIFT), lineColor='black', fillColor='black') 
                        
 # Suppressed Priming Ring of Crosses
 ringXY = []
 for ang in np.arange(0.75, 2.75, .25):
     ringXY.append((0.072 * np.cos(ang * np.pi), 0.128 * np.sin(ang * np.pi)))
-primingRing = visual.ElementArrayStim(win, fieldPos=(-CENTER_DIST, YPOS), sizes=(0.018, 0.018 * ASPECT_RATIO), 
-                                      nElements=8, xys=ringXY, elementMask=None, 
-                                      elementTex=PATH_TO_STIMULI + str(colorsToTest[0]) + '.png')
+primingRing = visual.ElementArrayStim(win, fieldPos=(-CENTER_DIST, YPOS + LEFT_SHIFT), sizes=(0.018, 0.018 * ASPECT_RATIO), 
+                                      nElements=8, xys=ringXY, elementMask='circle', elementTex=None, colorSpace='rgb255')
+ringLinesV = visual.ElementArrayStim(win, fieldPos=(-CENTER_DIST, YPOS + LEFT_SHIFT), sizes=(0.002, 0.05 * ASPECT_RATIO), 
+                                     nElements=8, xys=ringXY, elementMask=None, elementTex=None, colors='black')                                      
+ringLinesH = visual.ElementArrayStim(win, fieldPos=(-CENTER_DIST, YPOS + LEFT_SHIFT), sizes=(0.05, 0.002 * ASPECT_RATIO), 
+                                     nElements=8, xys=ringXY, elementMask=None, elementTex=None, colors='black')
                                       
 # Orientation Task Gabor
 tex1 = np.zeros((256, 256, 3))
 tex2 = np.zeros((256, 256, 3))
 for y in range(256):
-    hCenter = 128 + np.arctan(np.pi / 6) * (y - 128)  # gabor is rotated by 30 degrees
+    hCenter = 128 + np.arctan(np.pi / 180 ) * (y - 128)  # gabor is rotated by 30 degrees
     for x in range(256):
         val1 = np.sin((x - hCenter) * 2.0 * np.pi / 256 * 6)  # spatial frequency (sine periods)      
         val2 = np.sin((x + hCenter) * 2.0 * np.pi / 256 * 6)
@@ -85,9 +89,9 @@ for y in range(256):
 gabor = visual.GratingStim(win, mask="gauss", size=[0.024, 0.024 * ASPECT_RATIO])
                                       
 # Location Task Text
-questionL = visual.TextStim(win, pos=(-CENTER_DIST, 0.14 + YPOS), height=TEXT_SIZE, wrapWidth=0.23,
+questionL = visual.TextStim(win, pos=(-CENTER_DIST, 0.14 + YPOS + LEFT_SHIFT), height=TEXT_SIZE, wrapWidth=0.23,
                             text='Location?')
-choicesL = visual.TextStim(win, pos=(-CENTER_DIST, YPOS), height=TEXT_SIZE, wrapWidth=0.23,
+choicesL = visual.TextStim(win, pos=(-CENTER_DIST, YPOS + LEFT_SHIFT), height=TEXT_SIZE, wrapWidth=0.23,
                            text='Left (L)       Right (R)')
 questionR = visual.TextStim(win, pos=(CENTER_DIST, 0.14 + YPOS), height=TEXT_SIZE, wrapWidth=0.23,
                             text='Location?')
@@ -96,7 +100,7 @@ choicesR = visual.TextStim(win, pos=(CENTER_DIST, YPOS), height=TEXT_SIZE, wrapW
 
 # Confirmation Text
 confL = visual.TextStim(win, height=TEXT_SIZE, wrapWidth=0.23, 
-                        text='Response received!', pos=(-CENTER_DIST, 0.1 + YPOS))
+                        text='Response received!', pos=(-CENTER_DIST, 0.1 + YPOS + LEFT_SHIFT))
 confR = visual.TextStim(win, height=TEXT_SIZE, wrapWidth=0.23, 
                         text='Response received!', pos=(CENTER_DIST, 0.1 + YPOS))
 
@@ -282,36 +286,39 @@ def recordPreference(colors):
     
 def equiluminance(color1, color2):
     '''Employs heterochromatic flicker photometry to return equiluminant colors of given hues.'''
+    def multiplyTuple(c, factor):
+        return (int(c[0] * factor), int(c[1] * factor), int(c[2] * factor))
     flickerer.autoDraw = True
     sliderBar.autoDraw = True
+    origScale = colorsToTest[0][0] / 255.0
+    scaleFactor = origScale
     #  Reusing the indicator object
-    indicator.pos = (0, -0.2)
+    indicator.pos = (-0.3 + scaleFactor * 0.6, -0.2)
     indicator.size = (0.01, 0.02 * ASPECT_RATIO)
     indicator.autoDraw = True
     instructions.text = 'Press the left and right arrow keys to adjust the luminance of the colors. When' + \
-                        ' the circle does not seem to flicker anymore, press space to continue.'
-    scaleFactor = 1.0
-    temp2 = (int(color2[0] * scaleFactor), int(color2[1] * scaleFactor), int(color2[2] * scaleFactor))
+                        ' the circle does not seem to flicker anymore, press space to continue.'    
+    temp2 = multiplyTuple(color2, scaleFactor / origScale)
     while not event.getKeys(keyList=['space']):
         flickerer.fillColor = color1
         flickerer.lineColor = color1
-        for frameN in range(REFRESH_RATE / 30):  # show each color for 1/30th of a second
+        for frameN in range(REFRESH_RATE / 60):  # show each color for 1/60th of a second
             win.flip()
         flickerer.fillColor = temp2
         flickerer.lineColor = temp2
-        for frameN in range(REFRESH_RATE / 30):
+        for frameN in range(REFRESH_RATE / 60):
             win.flip()
         input = event.getKeys(keyList=['left', 'right'])
         if input and input[0] == 'left':
-            if scaleFactor > 0.04:
-                scaleFactor -= 0.04
-                indicator.pos = ((scaleFactor - 1.0) * 0.3, -0.2)
-            temp2 = (int(color2[0] * scaleFactor), int(color2[1] * scaleFactor), int(color2[2] * scaleFactor))
+            if scaleFactor > 0.01:
+                scaleFactor -= 0.01
+                indicator.pos = (-0.3 + scaleFactor * 0.6, -0.2)
+            temp2 = multiplyTuple(color2, scaleFactor / origScale)
         elif input and input[0] == 'right':
-            if scaleFactor < 3.96:
-                scaleFactor += 0.04
-                indicator.pos = ((scaleFactor - 1.0) * 0.3, -0.2)
-            temp2 = (int(color2[0] * scaleFactor), int(color2[1] * scaleFactor), int(color2[2] * scaleFactor))
+            if scaleFactor < 0.99:
+                scaleFactor += 0.01
+                indicator.pos = (-0.3 + scaleFactor * 0.6, -0.2)
+            temp2 = multiplyTuple(color2, scaleFactor / origScale)
     event.clearEvents()
     instructions.autoDraw = False
     flickerer.autoDraw = False
@@ -327,25 +334,35 @@ def ringPrime(stimColor, ringColor, popLoc):
     mond1.size = (0.2, 0.4)
     mond1.pos = (CENTER_DIST, YPOS)
     stim.size = (0.018, 0.018 * ASPECT_RATIO)  # reusing same stim object from first experiment
-    stim.pos = (-CENTER_DIST, YPOS + popLoc)
-    crossLineH.pos = (-CENTER_DIST, YPOS + popLoc)
-    crossLineV.pos = (-CENTER_DIST, YPOS + popLoc)
+    stim.pos = (-CENTER_DIST, YPOS + popLoc + LEFT_SHIFT)
+    crossLineH.pos = (-CENTER_DIST, YPOS + popLoc + LEFT_SHIFT)
+    crossLineV.pos = (-CENTER_DIST, YPOS + popLoc + LEFT_SHIFT)
     stim.fillColor = stimColor
     stim.lineColor = stimColor
-    primingRing.elementTex = PATH_TO_STIMULI + str(ringColor) + '.png'
+    primingRing.colors = ringColor
     mondN = 0
-    for frameN in range(REFRESH_RATE):
+    for frameN in range(int(1.8 * REFRESH_RATE)):
+        if frameN <= 1.8 * REFRESH_RATE:
+            relContrast = frameN / (1.8 * REFRESH_RATE)
+            stim.lineColor = (stimColor[0] * relContrast, stimColor[1] * relContrast, stimColor[2] * relContrast)
+            stim.fillColor = stim.lineColor
+            primingRing.colors = (ringColor[0] * relContrast, ringColor[1] * relContrast, ringColor[2] * relContrast)
         if int(frameN % (REFRESH_RATE / 10.0)) == 0:  # change mondrian 10 times per second
             mondN += 1
             if mondN > 9:  # there are 10 mondrians to cycle through
                 mondN = 0
             mond1.image = PATH_TO_MONDRIANS + '0' + str(mondN) + '.jpg'
         drawBackground()
-        primingRing.draw()
-        mond1.draw()
-        stim.draw()
-        crossLineH.draw()
-        crossLineV.draw()
+        if frameN % int(REFRESH_RATE * 0.6) < REFRESH_RATE / 3.0 + 4:
+            if frameN < 10 * REFRESH_RATE:
+                mond1.draw()
+            if frameN % int(REFRESH_RATE * 0.6) >= 2 and frameN % int(REFRESH_RATE * 0.6) < REFRESH_RATE / 3.0 + 2:
+                primingRing.draw()
+                ringLinesH.draw()
+                ringLinesV.draw()
+                stim.draw()
+                crossLineH.draw()
+                crossLineV.draw()
         if event.getKeys(keyList=['space']):
             event.clearEvents()
             return True
@@ -386,7 +403,7 @@ def orientationTask(color1, color2, layout):
         #OUTPUT_FILE.write(str(layout) + ' ' + str(askColor()) + '\n')
         pass
     else:
-        gabor.pos = (-CENTER_DIST, YPOS + layout[2])
+        gabor.pos = (-CENTER_DIST, YPOS + layout[2] + LEFT_SHIFT)
         if layout[3] > 0:
             gabor.tex = tex1
         else:
@@ -406,7 +423,7 @@ def showEndMsg():
     '''Displays message signifying the end of the experiment and waits for quit.'''
     endMsg.draw()
     win.flip()
-    event.waitKeys(keyList=['q'])
+    event.waitKeys(keyList=['q', 'escape'])
     
     
 if __name__ == '__main__':
