@@ -10,22 +10,22 @@ TODO: how to make sure least-favorite blue can get in equiluminance range of mos
 
 PATH_TO_MONDRIANS = 'Mondrians/newColors/'
 PATH_TO_STIMULI = 'ColorStimuli/'
-OUTPUT_FILE = open('colorPrefData/test1.txt', 'a')
+OUTPUT_FILE = open('colorPrefData/test2.txt', 'a')
 CENTER_DIST = 0.4  # positive for right-eye dominant, negative for left-eye dominant
 YPOS = 0.1
 LEFT_SHIFT = 0.055
 TEXT_SIZE = 0.038
 REFRESH_RATE = 60  # in Hz
-FIRST_STAGE_REPETITIONS = 0 # per color
-SECOND_STAGE_REPETITIONS = 2  # per layout 
-colorsToTest = [(4, 0, 0), (4, 2, 0), (4, 4, 0), (0, 4, 0), (0, 0, 4), (4, 0, 4)]
+FIRST_STAGE_REPETITIONS = 30 # per color
+SECOND_STAGE_REPETITIONS = 15  # per layout 
+colorsToTest = [(32, 0, 0), (32, 16, 0), (32, 32, 0), (0, 32, 0), (0, 0, 32), (32, 0, 32)]
                 
 # All possible trial configurations for second experiment
 layouts = []
 for popColor in [1, 2]:
     for popLoc in [-0.128, 0.128]:
         for gabLoc in [-0.128, 0.128]:
-            for gabTilt in [-30, 30]:
+            for gabTilt in [-3, 3]:
                 layouts.append((popColor, popLoc, gabLoc, gabTilt))
                     
 # Global Initialization
@@ -54,16 +54,19 @@ instructR2 = visual.TextStim(win, pos=(CENTER_DIST, -0.12 + YPOS), height=TEXT_S
                              text='Then, press space again when you see a colored dot.')
 
 # Mondrians and Suppressed Stimulus
-mond1 = visual.ImageStim(win, size=(0.08, 0.0675 * ASPECT_RATIO), pos=(CENTER_DIST, YPOS),
-                         image=PATH_TO_MONDRIANS + '01.jpg')
-mond2 = visual.ImageStim(win, size=(0.08, 0.0675 * ASPECT_RATIO), pos=(CENTER_DIST, YPOS),
-                         image=PATH_TO_MONDRIANS + '01.jpg')
-#stim = visual.ImageStim(win, size=(0.018, 0.018 * ASPECT_RATIO), pos=(-CENTER_DIST, YPOS), 
- #                       image=PATH_TO_STIMULI + str(colorsToTest[0]) + '.png')
+monds1 = []
+monds2 = []
+for i in range(10):
+    monds1.append(visual.ImageStim(win, size=(0.08, 0.0675 * ASPECT_RATIO), pos=(CENTER_DIST + 0.5 / 8, YPOS),
+                                   image=PATH_TO_MONDRIANS + '0' + str(i) + '.jpg'))
+    monds2.append(visual.ImageStim(win, size=(0.08, 0.0675 * ASPECT_RATIO), pos=(CENTER_DIST - 0.5 / 8, YPOS),
+                                   image=PATH_TO_MONDRIANS + '0' + str(i) + '.jpg'))
 stim = visual.Circle(win, size=(0.018, 0.018 * ASPECT_RATIO), pos=(-CENTER_DIST, YPOS + LEFT_SHIFT),
                      lineColorSpace='rgb255', fillColorSpace='rgb255')
-crossLineV = visual.Rect(win, size=(0.001, 0.1 * ASPECT_RATIO), pos=(-CENTER_DIST, YPOS + LEFT_SHIFT), lineColor='black', fillColor='black') 
-crossLineH = visual.Rect(win, size=(0.1, 0.001 * ASPECT_RATIO), pos=(-CENTER_DIST, YPOS + LEFT_SHIFT), lineColor='black', fillColor='black') 
+crossLineV = visual.Rect(win, size=(0.001, 0.1 * ASPECT_RATIO), pos=(-CENTER_DIST, YPOS + LEFT_SHIFT), 
+                         lineColor='black', fillColor='black') 
+crossLineH = visual.Rect(win, size=(0.1, 0.001 * ASPECT_RATIO), pos=(-CENTER_DIST, YPOS + LEFT_SHIFT), 
+                         lineColor='black', fillColor='black') 
                        
 # Suppressed Priming Ring of Crosses
 ringXY = []
@@ -80,7 +83,7 @@ ringLinesH = visual.ElementArrayStim(win, fieldPos=(-CENTER_DIST, YPOS + LEFT_SH
 tex1 = np.zeros((256, 256, 3))
 tex2 = np.zeros((256, 256, 3))
 for y in range(256):
-    hCenter = 128 + np.arctan(np.pi / 180 ) * (y - 128)  # gabor is rotated by 30 degrees
+    hCenter = 128 + np.arctan(np.pi / 60) * (y - 128)  # gabor is rotated by 3 degrees
     for x in range(256):
         val1 = np.sin((x - hCenter) * 2.0 * np.pi / 256 * 6)  # spatial frequency (sine periods)      
         val2 = np.sin((x + hCenter) * 2.0 * np.pi / 256 * 6)
@@ -167,9 +170,12 @@ def waitForReady(isSecondStage):
     if input[0] == 'escape':
         cleanExit()
 
-def askForLocation(loc):
+def askForLocation(loc, isSecondStage):
     '''Draws the question for the location task and waits for subject to answer.'''
     drawBackground()
+    if isSecondStage:
+        questionL.text = 'Direction of tilt?'
+        questionR.text = 'Direction of tilt?'
     questionL.draw()
     choicesL.draw()
     questionR.draw()
@@ -184,20 +190,18 @@ def circleBreakingTime(color, askLocation, blinking):
     stimulus of the given color. Writes results to output text file.
     '''
     loc = (np.random.randint(0, 2) - 0.5) / 8 # relative to center of box
-    mond1.pos =  (CENTER_DIST + loc, YPOS)
-    mond2.pos = (CENTER_DIST - loc, YPOS)
-    #stim.image = PATH_TO_STIMULI + str(color) + '.png'
     stim.lineColor = color
     stim.fillColor = color
-    stim.pos = (-CENTER_DIST + loc, YPOS)
-    crossLineH.pos = (-CENTER_DIST + loc, YPOS)
-    crossLineV.pos = (-CENTER_DIST + loc, YPOS)
+    stim.pos = (-CENTER_DIST + loc, YPOS + LEFT_SHIFT)
+    crossLineH.pos = (-CENTER_DIST + loc, YPOS + LEFT_SHIFT)
+    crossLineV.pos = (-CENTER_DIST + loc, YPOS + LEFT_SHIFT)
     waitForReady(False)
     fixTime = np.random.randint(0, REFRESH_RATE)
     for frameN in range(fixTime):
         drawBackground()
         win.flip()
     mondN = 0
+    breakingTime = 99999
     startTime = time.time()
     for frameN in range(int(10.8 * REFRESH_RATE)):  # want to allow up to 10 seconds, last display is for finding bad subjects
         if frameN <= 6 * REFRESH_RATE:
@@ -208,14 +212,12 @@ def circleBreakingTime(color, askLocation, blinking):
         if int(frameN % (REFRESH_RATE / 10.0)) == 0:  # change mondrian 10 times per second
             mondN += 1
             if mondN > 9:  # there are 10 mondrians to cycle through
-                mondN = 0
-            mond1.image = PATH_TO_MONDRIANS + '0' + str(mondN) + '.jpg'
-            mond2.image = PATH_TO_MONDRIANS + '0' + str(mondN) + '.jpg'            
+                mondN = 0           
         if blinking:
             if frameN % int(REFRESH_RATE * 0.6) < REFRESH_RATE / 3.0 + 4:
                 if frameN < 10 * REFRESH_RATE:
-                    mond1.draw()
-                    mond2.draw()
+                    monds1[mondN].draw()
+                    monds2[mondN].draw()
                 if frameN % int(REFRESH_RATE * 0.6) >= 2 and frameN % int(REFRESH_RATE * 0.6) < REFRESH_RATE / 3.0 + 2:
                     stim.draw()
                     crossLineH.draw()
@@ -225,19 +227,17 @@ def circleBreakingTime(color, askLocation, blinking):
             crossLineH.draw()
             crossLineV.draw()
             if frameN < 10 * REFRESH_RATE:
-                mond1.draw()
-                mond2.draw()
+                monds1[mondN].draw()
+                monds2[mondN].draw()
         if event.getKeys(keyList=['space']):
             breakingTime = time.time() - startTime
             win.flip()
-            if askLocation:
-                passedTask = askForLocation(loc)
-            print str(color) + ': ' + str(breakingTime) + ' seconds, test passed=' + str(passedTask)
-            OUTPUT_FILE.write(str(color).replace(' ', '') 
-                               + ' ' + str(breakingTime) 
-                               + ' ' + str(passedTask) + '\n')
             break
         win.flip()
+    if askLocation:
+        passedTask = askForLocation(loc, False)   
+        print str(color) + ': ' + str(breakingTime) + ' seconds, test passed=' + str(passedTask)
+        OUTPUT_FILE.write(str(color).replace(' ', '') + ' ' + str(breakingTime) + ' ' + str(passedTask) + '\n')
     event.clearEvents()   
     showConfirmation()
 
@@ -282,7 +282,6 @@ def recordPreference(colors):
         elif ranks[color].text == '1':
             mostFav = color
     return (mostFav, leastFav)
-    
     
 def equiluminance(color1, color2):
     '''Employs heterochromatic flicker photometry to return equiluminant colors of given hues.'''
@@ -331,8 +330,9 @@ def ringPrime(stimColor, ringColor, popLoc):
     Presents a suppressed ring of 8 cross-circles as a prime. The top cross-circle is of a different color.
     Returns whether or not the subject indicated (by pressing space) that they saw the ring. 
     '''
-    mond1.size = (0.2, 0.4)
-    mond1.pos = (CENTER_DIST, YPOS)
+    for mond in monds1:
+        mond.size = (0.2, 0.4)
+        mond.pos = (CENTER_DIST, YPOS)
     stim.size = (0.018, 0.018 * ASPECT_RATIO)  # reusing same stim object from first experiment
     stim.pos = (-CENTER_DIST, YPOS + popLoc + LEFT_SHIFT)
     crossLineH.pos = (-CENTER_DIST, YPOS + popLoc + LEFT_SHIFT)
@@ -351,11 +351,10 @@ def ringPrime(stimColor, ringColor, popLoc):
             mondN += 1
             if mondN > 9:  # there are 10 mondrians to cycle through
                 mondN = 0
-            mond1.image = PATH_TO_MONDRIANS + '0' + str(mondN) + '.jpg'
         drawBackground()
         if frameN % int(REFRESH_RATE * 0.6) < REFRESH_RATE / 3.0 + 4:
             if frameN < 10 * REFRESH_RATE:
-                mond1.draw()
+                monds1[mondN].draw()
             if frameN % int(REFRESH_RATE * 0.6) >= 2 and frameN % int(REFRESH_RATE * 0.6) < REFRESH_RATE / 3.0 + 2:
                 primingRing.draw()
                 ringLinesH.draw()
@@ -407,14 +406,14 @@ def orientationTask(color1, color2, layout):
         if layout[3] > 0:
             gabor.tex = tex1
         else:
-            gabor.tex = tex2
-        drawBackground()
-        gabor.draw()
+            gabor.tex = tex2        
         startTime = time.time()
-        win.flip()
-        answer = event.waitKeys(keyList=['left', 'right'])
+        for frameN in range(int(0.1 * REFRESH_RATE)):
+            drawBackground()
+            gabor.draw()
+            win.flip()
+        passedTask = askForLocation(layout[3], True) 
         responseTime = time.time() - startTime
-        passedTask = (answer[0] == 'left' and layout[3] < 0) or (answer[0] == 'right' and layout[3] > 0)  
         OUTPUT_FILE.write(str(layout) + ' ' + str(responseTime) + ' ' + str(passedTask) + '\n')
         event.clearEvents()
     showConfirmation()
