@@ -16,7 +16,7 @@ YPOS = 0.1
 LEFT_SHIFT = 0.055
 TEXT_SIZE = 0.038
 REFRESH_RATE = 60  # in Hz
-FIRST_STAGE_REPETITIONS = 30 # per color
+FIRST_STAGE_REPETITIONS = 0 # per color
 SECOND_STAGE_REPETITIONS = 15  # per layout 
 colorsToTest = [(32, 0, 0), (32, 16, 0), (32, 32, 0), (0, 32, 0), (0, 0, 32), (32, 0, 32)]
                 
@@ -122,9 +122,23 @@ instructions = visual.TextStim(win, pos=(0, 0.4), height=TEXT_SIZE, wrapWidth = 
                                     'favorite) for the indicated color. Press x to clear all if you ' + \
                                     'make a mistake. The experiment will continue once all 6 colors have been ranked.')
 flickerer = visual.Circle(win, pos=(0, 0.1), size=(0.18, 0.18 * ASPECT_RATIO), 
-                          fillColorSpace='rgb255', lineColorSpace='rgb255')
+                          fillColorSpace='rgb255', lineColorSpace='rgb255')                                   
 sliderBar = visual.Line(win, start=(-0.3, -0.2), end=(0.3, -0.2), lineColor='gray')
-                                    
+
+# Minimum Motion
+msk1 = np.zeros((256, 256))
+msk2 = np.zeros((256, 256))
+for y in range(256):
+    for x in range(256):
+        if x % 64 >= 16 and x % 64 < 48:
+            msk1[y][x] = 1
+        if x % 64 >= 32: 
+            msk2[y][x] = 1
+motionGrating1 = visual.GratingStim(win, pos=(0, 0.1), size=(0.6, 0.1 * ASPECT_RATIO),
+                                    mask=msk1, tex=None, colorSpace='rgb255')
+motionGrating2 = visual.GratingStim(win, pos=(0, 0.1), size=(0.6, 0.1 * ASPECT_RATIO),
+                                    mask=1 - msk1, tex=None, colorSpace='rgb255')
+                                   
 # Ending Message
 endMsgL = visual.TextStim(win, height=TEXT_SIZE, wrapWidth=0.23, pos=(-CENTER_DIST, 0.12 + YPOS),
                           text='All trials have been completed. Thank you for your participation!')
@@ -205,9 +219,7 @@ def circleBreakingTime(color, askLocation, blinking):
     startTime = time.time()
     for frameN in range(int(10.8 * REFRESH_RATE)):  # want to allow up to 10 seconds, last display is for finding bad subjects
         if frameN <= 6 * REFRESH_RATE:
-            relContrast = frameN / (6.0 * REFRESH_RATE)
-            stim.lineColor = (color[0] * relContrast, color[1] * relContrast, color[2] * relContrast)
-            stim.fillColor = stim.lineColor
+            stim.opacity = frameN / (6.0 * REFRESH_RATE)
         drawBackground()
         if int(frameN % (REFRESH_RATE / 10.0)) == 0:  # change mondrian 10 times per second
             mondN += 1
@@ -289,7 +301,7 @@ def equiluminance(color1, color2):
         return (int(c[0] * factor), int(c[1] * factor), int(c[2] * factor))
     flickerer.autoDraw = True
     sliderBar.autoDraw = True
-    origScale = colorsToTest[0][0] / 255.0
+    origScale = max(color2) / 255.0
     scaleFactor = origScale
     #  Reusing the indicator object
     indicator.pos = (-0.3 + scaleFactor * 0.6, -0.2)
@@ -325,6 +337,73 @@ def equiluminance(color1, color2):
     indicator.autoDraw = False
     return (color1, temp2)
     
+def equiluminanceAlt(color1, color2):
+    '''Employs minimum motion technique to return equiluminant colors of given hues.'''
+    def multiplyTuple(c, factor):
+        return (int(c[0] * factor), int(c[1] * factor), int(c[2] * factor))
+    motionGrating1.autoDraw = True
+    #motionGrating2.autoDraw = True
+    sliderBar.autoDraw = True
+    origScale = max(color2) / 255.0
+    scaleFactor = origScale
+    #  Reusing the indicator object
+    indicator.pos = (-0.3 + scaleFactor * 0.6, -0.2)
+    indicator.size = (0.01, 0.02 * ASPECT_RATIO)
+    indicator.autoDraw = True
+    instructions.text = 'Press the left and right arrow keys to adjust the luminance of the colors. When' + \
+                        ' the circle does not seem to flicker anymore, press space to continue.'    
+    temp2 = multiplyTuple(color2, scaleFactor / origScale)
+    while not event.getKeys(keyList=['space']):
+        for frameN in range(REFRESH_RATE * 30):
+            motionGrating1.color = (255, 0, 0)
+            motionGrating2.color = (0, 255, 0)
+            motionGrating1.mask = msk1
+            motionGrating2.mask = 1 - msk1
+            win.flip()
+        for frameN in range(REFRESH_RATE / 3):
+            motionGrating1.color = (0, 0, 0)
+            motionGrating2.color = (223, 223, 223)
+            motionGrating1.mask = msk2
+            motionGrating2.mask = 1 - msk2
+            motionGrating1.draw()
+            motionGrating2.draw()
+            win.flip()
+        for frameN in range(REFRESH_RATE / 3):
+            motionGrating1.color = (0, 255, 0)
+            motionGrating2.color = (255, 0, 0)
+            motionGrating1.mask = msk1
+            motionGrating2.mask = 1 - msk1
+            motionGrating1.draw()
+            motionGrating2.draw()
+            win.flip()
+        for frameN in range(REFRESH_RATE / 3):
+            motionGrating1.color = (223, 223, 223)
+            motionGrating2.color = (0, 0, 0)
+            motionGrating1.mask = msk2
+            motionGrating2.mask = 1 - msk2
+            motionGrating1.draw()
+            motionGrating2.draw()
+            win.flip()
+        
+        input = event.getKeys(keyList=['left', 'right'])
+        if input and input[0] == 'left':
+            if scaleFactor > 0.01:
+                scaleFactor -= 0.01
+                indicator.pos = (-0.3 + scaleFactor * 0.6, -0.2)
+            temp2 = multiplyTuple(color2, scaleFactor / origScale)
+        elif input and input[0] == 'right':
+            if scaleFactor < 0.99:
+                scaleFactor += 0.01
+                indicator.pos = (-0.3 + scaleFactor * 0.6, -0.2)
+            temp2 = multiplyTuple(color2, scaleFactor / origScale)
+    event.clearEvents()
+    instructions.autoDraw = False
+    motionGrating1.autoDraw = False
+    motionGrating2.autoDraw = False
+    sliderBar.autoDraw = False
+    indicator.autoDraw = False
+    return (color1, temp2)
+    
 def ringPrime(stimColor, ringColor, popLoc):
     '''
     Presents a suppressed ring of 8 cross-circles as a prime. The top cross-circle is of a different color.
@@ -333,6 +412,7 @@ def ringPrime(stimColor, ringColor, popLoc):
     for mond in monds1:
         mond.size = (0.2, 0.4)
         mond.pos = (CENTER_DIST, YPOS)
+        mond.mask = 'circle'
     stim.size = (0.018, 0.018 * ASPECT_RATIO)  # reusing same stim object from first experiment
     stim.pos = (-CENTER_DIST, YPOS + popLoc + LEFT_SHIFT)
     crossLineH.pos = (-CENTER_DIST, YPOS + popLoc + LEFT_SHIFT)
@@ -343,10 +423,8 @@ def ringPrime(stimColor, ringColor, popLoc):
     mondN = 0
     for frameN in range(int(1.8 * REFRESH_RATE)):
         if frameN <= 1.8 * REFRESH_RATE:
-            relContrast = frameN / (1.8 * REFRESH_RATE)
-            stim.lineColor = (stimColor[0] * relContrast, stimColor[1] * relContrast, stimColor[2] * relContrast)
-            stim.fillColor = stim.lineColor
-            primingRing.colors = (ringColor[0] * relContrast, ringColor[1] * relContrast, ringColor[2] * relContrast)
+            stim.opacity = frameN / (1.8 * REFRESH_RATE)
+            primingRing.opacities = frameN / (1.8 * REFRESH_RATE) 
         if int(frameN % (REFRESH_RATE / 10.0)) == 0:  # change mondrian 10 times per second
             mondN += 1
             if mondN > 9:  # there are 10 mondrians to cycle through
@@ -435,9 +513,7 @@ if __name__ == '__main__':
     for trialColor in trialOrder:
         circleBreakingTime(colorsToTest[trialColor], True, True)
     extremes = recordPreference(colorsToTest)
-    newColors = equiluminance(extremes[0], extremes[1])
-    crss.makeCross(newColors[0])    
-    crss.makeCross(newColors[1])
+    newColors = equiluminanceAlt(extremes[0], extremes[1])
     trialOrder = []
     for i in range(len(layouts)):
         trialOrder += [i] * SECOND_STAGE_REPETITIONS
