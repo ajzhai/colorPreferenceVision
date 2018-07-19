@@ -126,18 +126,18 @@ flickerer = visual.Circle(win, pos=(0, 0.1), size=(0.18, 0.18 * ASPECT_RATIO),
 sliderBar = visual.Line(win, start=(-0.3, -0.2), end=(0.3, -0.2), lineColor='gray')
 
 # Minimum Motion
-msk1 = np.zeros((256, 256))
-msk2 = np.zeros((256, 256))
+msk1 = np.ones((256, 256))
+msk2 = np.ones((256, 256))
 for y in range(256):
     for x in range(256):
-        if x % 64 >= 16 and x % 64 < 48:
-            msk1[y][x] = 1
-        if x % 64 >= 32: 
-            msk2[y][x] = 1
+        if x % 64 < 16 or x % 64 >= 48:
+            msk1[y][x] = -1
+        if x % 64 < 32: 
+            msk2[y][x] = -1
 motionGrating1 = visual.GratingStim(win, pos=(0, 0.1), size=(0.6, 0.1 * ASPECT_RATIO),
                                     mask=msk1, tex=None, colorSpace='rgb255')
 motionGrating2 = visual.GratingStim(win, pos=(0, 0.1), size=(0.6, 0.1 * ASPECT_RATIO),
-                                    mask=1 - msk1, tex=None, colorSpace='rgb255')
+                                    mask=-msk1, tex=None, colorSpace='rgb255')
                                    
 # Ending Message
 endMsgL = visual.TextStim(win, height=TEXT_SIZE, wrapWidth=0.23, pos=(-CENTER_DIST, 0.12 + YPOS),
@@ -342,7 +342,7 @@ def equiluminanceAlt(color1, color2):
     def multiplyTuple(c, factor):
         return (int(c[0] * factor), int(c[1] * factor), int(c[2] * factor))
     motionGrating1.autoDraw = True
-    #motionGrating2.autoDraw = True
+    motionGrating2.autoDraw = True
     sliderBar.autoDraw = True
     origScale = max(color2) / 255.0
     scaleFactor = origScale
@@ -351,51 +351,37 @@ def equiluminanceAlt(color1, color2):
     indicator.size = (0.01, 0.02 * ASPECT_RATIO)
     indicator.autoDraw = True
     instructions.text = 'Press the left and right arrow keys to adjust the luminance of the colors. When' + \
-                        ' the circle does not seem to flicker anymore, press space to continue.'    
+                        ' the pattern does not seem to move anymore, press space to continue.'    
     temp2 = multiplyTuple(color2, scaleFactor / origScale)
+    framesPerCycle = REFRESH_RATE / 3
+    global msk1, msk2
     while not event.getKeys(keyList=['space']):
-        for frameN in range(REFRESH_RATE * 30):
-            motionGrating1.color = (255, 0, 0)
-            motionGrating2.color = (0, 255, 0)
-            motionGrating1.mask = msk1
-            motionGrating2.mask = 1 - msk1
-            win.flip()
-        for frameN in range(REFRESH_RATE / 3):
-            motionGrating1.color = (0, 0, 0)
-            motionGrating2.color = (223, 223, 223)
-            motionGrating1.mask = msk2
-            motionGrating2.mask = 1 - msk2
-            motionGrating1.draw()
-            motionGrating2.draw()
-            win.flip()
-        for frameN in range(REFRESH_RATE / 3):
-            motionGrating1.color = (0, 255, 0)
-            motionGrating2.color = (255, 0, 0)
-            motionGrating1.mask = msk1
-            motionGrating2.mask = 1 - msk1
-            motionGrating1.draw()
-            motionGrating2.draw()
-            win.flip()
-        for frameN in range(REFRESH_RATE / 3):
-            motionGrating1.color = (223, 223, 223)
-            motionGrating2.color = (0, 0, 0)
-            motionGrating1.mask = msk2
-            motionGrating2.mask = 1 - msk2
-            motionGrating1.draw()
-            motionGrating2.draw()
-            win.flip()
-        
-        input = event.getKeys(keyList=['left', 'right'])
-        if input and input[0] == 'left':
-            if scaleFactor > 0.01:
-                scaleFactor -= 0.01
-                indicator.pos = (-0.3 + scaleFactor * 0.6, -0.2)
-            temp2 = multiplyTuple(color2, scaleFactor / origScale)
-        elif input and input[0] == 'right':
-            if scaleFactor < 0.99:
-                scaleFactor += 0.01
-                indicator.pos = (-0.3 + scaleFactor * 0.6, -0.2)
-            temp2 = multiplyTuple(color2, scaleFactor / origScale)
+        for frameN in range(framesPerCycle):
+            if frameN == 0 or frameN == framesPerCycle / 2:
+                msk1 *= -1
+                msk2 *= -1
+            if frameN % (framesPerCycle / 2) < framesPerCycle / 4:
+                motionGrating1.color = color1
+                motionGrating2.color = temp2
+                motionGrating1.mask = msk1
+                motionGrating2.mask = -msk1
+            else:
+                motionGrating1.color = (0, 0, 0)
+                motionGrating2.color = (32, 32, 32)
+                motionGrating1.mask = msk2
+                motionGrating2.mask = -msk2
+            win.flip()                         
+            input = event.getKeys(keyList=['left', 'right'])
+            if input and input[0] == 'left':
+                if scaleFactor > 0.01:
+                    scaleFactor -= 0.01
+                    indicator.pos = (-0.3 + scaleFactor * 0.6, -0.2)
+                temp2 = multiplyTuple(color2, scaleFactor / origScale)
+            elif input and input[0] == 'right':
+                if scaleFactor < 0.99:
+                    scaleFactor += 0.01
+                    indicator.pos = (-0.3 + scaleFactor * 0.6, -0.2)
+                temp2 = multiplyTuple(color2, scaleFactor / origScale)
     event.clearEvents()
     instructions.autoDraw = False
     motionGrating1.autoDraw = False
