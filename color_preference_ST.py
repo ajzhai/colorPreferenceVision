@@ -16,15 +16,15 @@ YPOS = 0.1
 LEFT_SHIFT = 0.055
 TEXT_SIZE = 0.038
 REFRESH_RATE = 60  # in Hz
-FIRST_STAGE_REPETITIONS = 0 # per color
+FIRST_STAGE_REPETITIONS = 1 # per color
 SECOND_STAGE_REPETITIONS = 15  # per layout 
-colorsToTest = [(32, 0, 0), (32, 16, 0), (32, 32, 0), (0, 32, 0), (0, 0, 32), (32, 0, 32)]
+colorsToTest = [(4, 0, 0), (4, 2, 0), (4, 4, 0), (0, 4, 0), (0, 0, 32), (4, 0, 4)]
                 
 # All possible trial configurations for second experiment
 layouts = []
 for popColor in [1, 2]:
-    for popLoc in [-0.128, 0.128]:
-        for gabLoc in [-0.128, 0.128]:
+    for popLoc in [-0.12, 0.12]:
+        for gabLoc in [-0.12, 0.12]:
             for gabTilt in [-3, 3]:
                 layouts.append((popColor, popLoc, gabLoc, gabTilt))
                     
@@ -58,9 +58,9 @@ monds1 = []
 monds2 = []
 for i in range(10):
     monds1.append(visual.ImageStim(win, size=(0.08, 0.0675 * ASPECT_RATIO), pos=(CENTER_DIST + 0.5 / 8, YPOS),
-                                   image=PATH_TO_MONDRIANS + '0' + str(i) + '.jpg'))
+                                   image=PATH_TO_MONDRIANS + 'circ0' + str(i) + '.jpg'))
     monds2.append(visual.ImageStim(win, size=(0.08, 0.0675 * ASPECT_RATIO), pos=(CENTER_DIST - 0.5 / 8, YPOS),
-                                   image=PATH_TO_MONDRIANS + '0' + str(i) + '.jpg'))
+                                   image=PATH_TO_MONDRIANS + 'circ0' + str(i) + '.jpg'))
 stim = visual.Circle(win, size=(0.018, 0.018 * ASPECT_RATIO), pos=(-CENTER_DIST, YPOS + LEFT_SHIFT),
                      lineColorSpace='rgb255', fillColorSpace='rgb255')
 crossLineV = visual.Rect(win, size=(0.001, 0.1 * ASPECT_RATIO), pos=(-CENTER_DIST, YPOS + LEFT_SHIFT), 
@@ -71,7 +71,7 @@ crossLineH = visual.Rect(win, size=(0.1, 0.001 * ASPECT_RATIO), pos=(-CENTER_DIS
 # Suppressed Priming Ring of Crosses
 ringXY = []
 for ang in np.arange(0.75, 2.75, .25):
-    ringXY.append((0.072 * np.cos(ang * np.pi), 0.128 * np.sin(ang * np.pi)))
+    ringXY.append((0.12 / ASPECT_RATIO * np.cos(ang * np.pi), 0.12 * np.sin(ang * np.pi)))
 primingRing = visual.ElementArrayStim(win, fieldPos=(-CENTER_DIST, YPOS + LEFT_SHIFT), sizes=(0.018, 0.018 * ASPECT_RATIO), 
                                       nElements=8, xys=ringXY, elementMask='circle', elementTex=None, colorSpace='rgb255')
 ringLinesV = visual.ElementArrayStim(win, fieldPos=(-CENTER_DIST, YPOS + LEFT_SHIFT), sizes=(0.002, 0.05 * ASPECT_RATIO), 
@@ -344,7 +344,7 @@ def equiluminanceAlt(color1, color2):
     motionGrating1.autoDraw = True
     motionGrating2.autoDraw = True
     sliderBar.autoDraw = True
-    origScale = max(color2) / 255.0
+    origScale = max(color2) / 32.0
     scaleFactor = origScale
     #  Reusing the indicator object
     indicator.pos = (-0.3 + scaleFactor * 0.6, -0.2)
@@ -354,6 +354,7 @@ def equiluminanceAlt(color1, color2):
                         ' the pattern does not seem to move anymore, press space to continue.'    
     temp2 = multiplyTuple(color2, scaleFactor / origScale)
     framesPerCycle = REFRESH_RATE / 3
+    scaleStep = 0.03
     global msk1, msk2
     while not event.getKeys(keyList=['space']):
         for frameN in range(framesPerCycle):
@@ -373,13 +374,13 @@ def equiluminanceAlt(color1, color2):
             win.flip()                         
             input = event.getKeys(keyList=['left', 'right'])
             if input and input[0] == 'left':
-                if scaleFactor > 0.01:
-                    scaleFactor -= 0.01
+                if scaleFactor > scaleStep:
+                    scaleFactor -= scaleStep
                     indicator.pos = (-0.3 + scaleFactor * 0.6, -0.2)
                 temp2 = multiplyTuple(color2, scaleFactor / origScale)
             elif input and input[0] == 'right':
-                if scaleFactor < 0.99:
-                    scaleFactor += 0.01
+                if scaleFactor < 1 - scaleStep:
+                    scaleFactor += scaleStep
                     indicator.pos = (-0.3 + scaleFactor * 0.6, -0.2)
                 temp2 = multiplyTuple(color2, scaleFactor / origScale)
     event.clearEvents()
@@ -398,7 +399,6 @@ def ringPrime(stimColor, ringColor, popLoc):
     for mond in monds1:
         mond.size = (0.2, 0.4)
         mond.pos = (CENTER_DIST, YPOS)
-        mond.mask = 'circle'
     stim.size = (0.018, 0.018 * ASPECT_RATIO)  # reusing same stim object from first experiment
     stim.pos = (-CENTER_DIST, YPOS + popLoc + LEFT_SHIFT)
     crossLineH.pos = (-CENTER_DIST, YPOS + popLoc + LEFT_SHIFT)
@@ -472,7 +472,7 @@ def orientationTask(color1, color2, layout):
         else:
             gabor.tex = tex2        
         startTime = time.time()
-        for frameN in range(int(0.1 * REFRESH_RATE)):
+        for frameN in range(int(REFRESH_RATE / 3)):
             drawBackground()
             gabor.draw()
             win.flip()
