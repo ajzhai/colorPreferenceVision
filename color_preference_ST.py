@@ -6,6 +6,11 @@ import time
 
 '''
 TODO: how to make sure least-favorite blue can get in equiluminance range of most-favorite yellow?
+fix minimum motion slider
+
+5.28 : 14.2 : 0.79
+0.14962 : 0.055634 : 1.00
+6.68: 1.00 : 18.0
 '''
 
 PATH_TO_MONDRIANS = 'Mondrians/newColors/'
@@ -16,9 +21,12 @@ YPOS = 0.1
 LEFT_SHIFT = 0.055
 TEXT_SIZE = 0.038
 REFRESH_RATE = 60  # in Hz
-FIRST_STAGE_REPETITIONS = 1 # per color
+FIRST_STAGE_REPETITIONS = 0 # per color
 SECOND_STAGE_REPETITIONS = 15  # per layout 
-colorsToTest = [(4, 0, 0), (4, 2, 0), (4, 4, 0), (0, 4, 0), (0, 0, 32), (4, 0, 4)]
+tweak = 0.3
+colorsToTest = [(27 * tweak, 0, 0), (12 * tweak, 6 * tweak, 0), (8 * tweak, 8 * tweak, 0), (0, 10 * tweak, 0), (0, 0, 180 * tweak), 
+                (24 * tweak, 0, 24 * tweak)]
+
                 
 # All possible trial configurations for second experiment
 layouts = []
@@ -57,12 +65,12 @@ instructR2 = visual.TextStim(win, pos=(CENTER_DIST, -0.12 + YPOS), height=TEXT_S
 monds1 = []
 monds2 = []
 for i in range(10):
-    monds1.append(visual.ImageStim(win, size=(0.08, 0.0675 * ASPECT_RATIO), pos=(CENTER_DIST + 0.5 / 8, YPOS),
+    monds1.append(visual.ImageStim(win, size=(0.08, 0.08 * ASPECT_RATIO), pos=(CENTER_DIST + 0.5 / 8, YPOS),
                                    image=PATH_TO_MONDRIANS + 'circ0' + str(i) + '.jpg'))
-    monds2.append(visual.ImageStim(win, size=(0.08, 0.0675 * ASPECT_RATIO), pos=(CENTER_DIST - 0.5 / 8, YPOS),
+    monds2.append(visual.ImageStim(win, size=(0.08, 0.08 * ASPECT_RATIO), pos=(CENTER_DIST - 0.5 / 8, YPOS),
                                    image=PATH_TO_MONDRIANS + 'circ0' + str(i) + '.jpg'))
 stim = visual.Circle(win, size=(0.018, 0.018 * ASPECT_RATIO), pos=(-CENTER_DIST, YPOS + LEFT_SHIFT),
-                     lineColorSpace='rgb255', fillColorSpace='rgb255')
+                     lineColor='black', fillColorSpace='rgb255')
 crossLineV = visual.Rect(win, size=(0.001, 0.1 * ASPECT_RATIO), pos=(-CENTER_DIST, YPOS + LEFT_SHIFT), 
                          lineColor='black', fillColor='black') 
 crossLineH = visual.Rect(win, size=(0.1, 0.001 * ASPECT_RATIO), pos=(-CENTER_DIST, YPOS + LEFT_SHIFT), 
@@ -204,7 +212,6 @@ def circleBreakingTime(color, askLocation, blinking):
     stimulus of the given color. Writes results to output text file.
     '''
     loc = (np.random.randint(0, 2) - 0.5) / 8 # relative to center of box
-    stim.lineColor = color
     stim.fillColor = color
     stim.pos = (-CENTER_DIST + loc, YPOS + LEFT_SHIFT)
     crossLineH.pos = (-CENTER_DIST + loc, YPOS + LEFT_SHIFT)
@@ -397,29 +404,29 @@ def ringPrime(stimColor, ringColor, popLoc):
     Returns whether or not the subject indicated (by pressing space) that they saw the ring. 
     '''
     for mond in monds1:
-        mond.size = (0.2, 0.4)
+        mond.size = (0.2, 0.2 * ASPECT_RATIO)
         mond.pos = (CENTER_DIST, YPOS)
     stim.size = (0.018, 0.018 * ASPECT_RATIO)  # reusing same stim object from first experiment
     stim.pos = (-CENTER_DIST, YPOS + popLoc + LEFT_SHIFT)
     crossLineH.pos = (-CENTER_DIST, YPOS + popLoc + LEFT_SHIFT)
     crossLineV.pos = (-CENTER_DIST, YPOS + popLoc + LEFT_SHIFT)
     stim.fillColor = stimColor
-    stim.lineColor = stimColor
     primingRing.colors = ringColor
     mondN = 0
-    for frameN in range(int(1.8 * REFRESH_RATE)):
-        if frameN <= 1.8 * REFRESH_RATE:
-            stim.opacity = frameN / (1.8 * REFRESH_RATE)
-            primingRing.opacities = frameN / (1.8 * REFRESH_RATE) 
+    for frameN in range(int(2.4 * REFRESH_RATE)):  
+        if frameN <= 2.4 * REFRESH_RATE:
+            stim.opacity = frameN / (2.4 * REFRESH_RATE)
+            primingRing.opacities = frameN / (2.4 * REFRESH_RATE) 
         if int(frameN % (REFRESH_RATE / 10.0)) == 0:  # change mondrian 10 times per second
-            mondN += 1
+            mondN += 1            
             if mondN > 9:  # there are 10 mondrians to cycle through
                 mondN = 0
+            monds1[mondN].opacity = np.random.randint(75, 100) / 100.0
         drawBackground()
-        if frameN % int(REFRESH_RATE * 0.6) < REFRESH_RATE / 3.0 + 4:
+        if frameN % int(REFRESH_RATE * 0.4) < REFRESH_RATE / 6.0 + 4:
             if frameN < 10 * REFRESH_RATE:
                 monds1[mondN].draw()
-            if frameN % int(REFRESH_RATE * 0.6) >= 2 and frameN % int(REFRESH_RATE * 0.6) < REFRESH_RATE / 3.0 + 2:
+            if frameN % int(REFRESH_RATE * 0.4) >= 2 and frameN % int(REFRESH_RATE * 0.4) < REFRESH_RATE / 6.0 + 2:
                 primingRing.draw()
                 ringLinesH.draw()
                 ringLinesV.draw()
