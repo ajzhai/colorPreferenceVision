@@ -15,7 +15,7 @@ fix minimum motion slider
 
 PATH_TO_MONDRIANS = 'Mondrians/newColors/'
 PATH_TO_STIMULI = 'ColorStimuli/'
-OUTPUT_FILE = open('colorPrefData/test2.txt', 'a')
+OUTPUT_FILE = open('colorPrefData/testJuly23.txt', 'a')
 CENTER_DIST = 0.4  # positive for right-eye dominant, negative for left-eye dominant
 YPOS = 0.1
 LEFT_SHIFT = 0.055
@@ -23,10 +23,11 @@ TEXT_SIZE = 0.038
 REFRESH_RATE = 60  # in Hz
 FIRST_STAGE_REPETITIONS = 0 # per color
 SECOND_STAGE_REPETITIONS = 15  # per layout 
-tweak = 0.3
-colorsToTest = [(27 * tweak, 0, 0), (12 * tweak, 6 * tweak, 0), (8 * tweak, 8 * tweak, 0), (0, 10 * tweak, 0), (0, 0, 180 * tweak), 
-                (24 * tweak, 0, 24 * tweak)]
 
+colorsToTest = [(27, 0, 0), (12, 6, 0), (8, 8, 0), (0, 10, 0), (0, 0, 180), (24, 0, 24)]
+tweak = 0.3
+for i, color in enumerate(colorsToTest):
+    colorsToTest[i] = (int(round(color[0] * tweak)), int(round(color[1] * tweak)), int(round(color[2] * tweak)))
                 
 # All possible trial configurations for second experiment
 layouts = []
@@ -43,9 +44,13 @@ ASPECT_RATIO = float(win.size[0]) / win.size[1]
 
 # Background                      
 leftFix = visual.Circle(win, lineColor='white', fillColor='white', 
-                        size=(0.0045, 0.0045 * ASPECT_RATIO), pos=(-CENTER_DIST, YPOS + LEFT_SHIFT))
+                        size=(0.0025, 0.0025 * ASPECT_RATIO), pos=(-CENTER_DIST, YPOS + LEFT_SHIFT))
 rightFix = visual.Circle(win, lineColor='white', fillColor='white', 
-                         size=(0.0045, 0.0045 * ASPECT_RATIO), pos=(CENTER_DIST, YPOS))
+                        size=(0.0025, 0.0025 * ASPECT_RATIO), pos=(CENTER_DIST, YPOS))
+#rightFix = visual.GratingStim(win, size=(0.01, 0.01 * ASPECT_RATIO), pos=(CENTER_DIST, YPOS),
+ #                            mask=None, tex='cross', color='white')
+rightFixBorder = visual.Circle(win, lineColor='black', fillColor='black',
+                               size=(0.015, 0.015 * ASPECT_RATIO), pos=(CENTER_DIST, YPOS))
 leftBox = visual.Rect(win, lineColor='white', fillColor='black', 
                       size=(0.54, 0.54 * ASPECT_RATIO), pos=(-CENTER_DIST, YPOS + LEFT_SHIFT))
 rightBox = visual.Rect(win, lineColor='white', fillColor='black', 
@@ -120,8 +125,8 @@ circles = {}
 ranks = {}
 for i, color in enumerate(colorsToTest):
     hPos = (i - (len(colorsToTest) - 1) / 2.0) * 0.1
-    circles[color] = visual.ImageStim(win, size=(0.018, 0.018 * ASPECT_RATIO), pos=(hPos, 0.2),
-                                      image=PATH_TO_STIMULI + str(color) + '.png')
+    circles[color] = visual.GratingStim(win, size=(0.018, 0.018 * ASPECT_RATIO), pos=(hPos, 0.2),
+                                        colorSpace='rgb255', color=color, tex=None, mask=crss.msk)
     ranks[color] = visual.TextStim(win, height=TEXT_SIZE, pos=(hPos, 0.12), text='_')
 indicator = visual.Rect(win, lineColor='white', fillColor='black', size=(0.12, 0.225 * ASPECT_RATIO), 
                            pos=(-(len(colorsToTest) - 1) / 2.0 * 0.1, 0.175))
@@ -136,11 +141,12 @@ sliderBar = visual.Line(win, start=(-0.3, -0.2), end=(0.3, -0.2), lineColor='gra
 # Minimum Motion
 msk1 = np.ones((256, 256))
 msk2 = np.ones((256, 256))
+segments = 8
 for y in range(256):
     for x in range(256):
-        if x % 64 < 16 or x % 64 >= 48:
+        if x % (256 / segments) < (64 / segments) or x % (256 / segments) >= (192 / segments):
             msk1[y][x] = -1
-        if x % 64 < 32: 
+        if x % (256 / segments) < (128 / segments): 
             msk2[y][x] = -1
 motionGrating1 = visual.GratingStim(win, pos=(0, 0.1), size=(0.6, 0.1 * ASPECT_RATIO),
                                     mask=msk1, tex=None, colorSpace='rgb255')
@@ -347,21 +353,21 @@ def equiluminance(color1, color2):
 def equiluminanceAlt(color1, color2):
     '''Employs minimum motion technique to return equiluminant colors of given hues.'''
     def multiplyTuple(c, factor):
-        return (int(c[0] * factor), int(c[1] * factor), int(c[2] * factor))
+        return (int(round(c[0] * factor)), int(round(c[1] * factor)), int(round(c[2] * factor)))
     motionGrating1.autoDraw = True
     motionGrating2.autoDraw = True
     sliderBar.autoDraw = True
-    origScale = max(color2) / 32.0
+    origScale = 0.5
     scaleFactor = origScale
     #  Reusing the indicator object
     indicator.pos = (-0.3 + scaleFactor * 0.6, -0.2)
     indicator.size = (0.01, 0.02 * ASPECT_RATIO)
     indicator.autoDraw = True
     instructions.text = 'Press the left and right arrow keys to adjust the luminance of the colors. When' + \
-                        ' the pattern does not seem to move anymore, press space to continue.'    
+                        " the pattern's movement seems to change direction, press space to continue."    
     temp2 = multiplyTuple(color2, scaleFactor / origScale)
     framesPerCycle = REFRESH_RATE / 3
-    scaleStep = 0.03
+    scaleStep = 0.1
     global msk1, msk2
     while not event.getKeys(keyList=['space']):
         for frameN in range(framesPerCycle):
@@ -375,7 +381,7 @@ def equiluminanceAlt(color1, color2):
                 motionGrating2.mask = -msk1
             else:
                 motionGrating1.color = (0, 0, 0)
-                motionGrating2.color = (32, 32, 32)
+                motionGrating2.color = (16, 16, 16)
                 motionGrating1.mask = msk2
                 motionGrating2.mask = -msk2
             win.flip()                         
@@ -413,29 +419,32 @@ def ringPrime(stimColor, ringColor, popLoc):
     stim.fillColor = stimColor
     primingRing.colors = ringColor
     mondN = 0
-    for frameN in range(int(2.4 * REFRESH_RATE)):  
-        if frameN <= 2.4 * REFRESH_RATE:
-            stim.opacity = frameN / (2.4 * REFRESH_RATE)
-            primingRing.opacities = frameN / (2.4 * REFRESH_RATE) 
+    for frameN in range(int(2.5 * REFRESH_RATE)):  
+        if frameN <= 2.5 * REFRESH_RATE:
+            stim.opacity = frameN / (2.5 * REFRESH_RATE)
+            primingRing.opacities = frameN / (2.5 * REFRESH_RATE) 
         if int(frameN % (REFRESH_RATE / 10.0)) == 0:  # change mondrian 10 times per second
             mondN += 1            
             if mondN > 9:  # there are 10 mondrians to cycle through
                 mondN = 0
-            monds1[mondN].opacity = np.random.randint(75, 100) / 100.0
+            #monds1[mondN].opacity = np.random.randint(70, 101) / 100.0
         drawBackground()
-        if frameN % int(REFRESH_RATE * 0.4) < REFRESH_RATE / 6.0 + 4:
+        if frameN % int(REFRESH_RATE * 0.5) < REFRESH_RATE / 5 + 6:
             if frameN < 10 * REFRESH_RATE:
                 monds1[mondN].draw()
-            if frameN % int(REFRESH_RATE * 0.4) >= 2 and frameN % int(REFRESH_RATE * 0.4) < REFRESH_RATE / 6.0 + 2:
+            if frameN % int(REFRESH_RATE * 0.5) >= 3 and frameN % int(REFRESH_RATE * 0.5) < REFRESH_RATE / 5 + 3:
                 primingRing.draw()
                 ringLinesH.draw()
                 ringLinesV.draw()
                 stim.draw()
                 crossLineH.draw()
                 crossLineV.draw()
+        rightFixBorder.draw()
+        rightFix.draw()
         if event.getKeys(keyList=['space']):
             event.clearEvents()
             return True
+        
         win.flip()
     return False
 
@@ -479,7 +488,7 @@ def orientationTask(color1, color2, layout):
         else:
             gabor.tex = tex2        
         startTime = time.time()
-        for frameN in range(int(REFRESH_RATE / 3)):
+        for frameN in range(int(REFRESH_RATE / 10)):
             drawBackground()
             gabor.draw()
             win.flip()
@@ -497,8 +506,8 @@ def showEndMsg():
     
     
 if __name__ == '__main__':
-    print win.size
-    print win.getActualFrameRate()
+    print "Running at " + str(win.size) + " resolution with refresh rate of " + str(win.getActualFrameRate()) + " Hz..."
+    print "Conducting experiment 1 using the following colors: " + str(colorsToTest)
     trialOrder = []
     for i in range(len(colorsToTest)):
         trialOrder += [i] * FIRST_STAGE_REPETITIONS
