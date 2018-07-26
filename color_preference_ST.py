@@ -21,7 +21,7 @@ YPOS = 0.1
 LEFT_SHIFT = 0.055
 TEXT_SIZE = 0.038
 REFRESH_RATE = 60  # in Hz
-FIRST_STAGE_REPETITIONS = 0 # per color
+FIRST_STAGE_REPETITIONS = 1 # per color
 SECOND_STAGE_REPETITIONS = 15  # per layout 
 
 colorsToTest = [(27, 0, 0), (12, 6, 0), (8, 8, 0), (0, 10, 0), (0, 0, 180), (24, 0, 24)]
@@ -29,13 +29,6 @@ tweak = 0.3
 for i, color in enumerate(colorsToTest):
     colorsToTest[i] = (int(round(color[0] * tweak)), int(round(color[1] * tweak)), int(round(color[2] * tweak)))
                 
-# All possible trial configurations for second experiment
-layouts = []
-for popColor in [1, 2]:
-    for popLoc in [-0.12, 0.12]:
-        for gabLoc in [-0.12, 0.12]:
-            for gabTilt in [-3, 3]:
-                layouts.append((popColor, popLoc, gabLoc, gabTilt))
                     
 # Global Initialization
 win = visual.Window((1920, 1080), fullscr=True, allowGUI=False, 
@@ -44,11 +37,15 @@ ASPECT_RATIO = float(win.size[0]) / win.size[1]
 
 # Background                      
 leftFix = visual.Circle(win, lineColor='white', fillColor='white', 
-                        size=(0.0025, 0.0025 * ASPECT_RATIO), pos=(-CENTER_DIST, YPOS + LEFT_SHIFT))
+                        size=(0.0015, 0.0015 * ASPECT_RATIO), pos=(-CENTER_DIST, YPOS + LEFT_SHIFT))
 rightFix = visual.Circle(win, lineColor='white', fillColor='white', 
-                        size=(0.0025, 0.0025 * ASPECT_RATIO), pos=(CENTER_DIST, YPOS))
+                        size=(0.0015, 0.0015 * ASPECT_RATIO), pos=(CENTER_DIST, YPOS))
 #rightFix = visual.GratingStim(win, size=(0.01, 0.01 * ASPECT_RATIO), pos=(CENTER_DIST, YPOS),
  #                            mask=None, tex='cross', color='white')
+leftFix1 = visual.Rect(win, lineColor='white', fillColor='white', size=(0.00, 0.029 * ASPECT_RATIO), pos= (-CENTER_DIST, YPOS + LEFT_SHIFT))
+leftFix2 = visual.Rect(win, lineColor='white',fillColor='white', size=(0.03, 0.00 * ASPECT_RATIO), pos= (-CENTER_DIST, YPOS + LEFT_SHIFT))
+rightFix1 = visual.Rect(win, lineColor='white',fillColor='white', size=(0.03, 0.00 * ASPECT_RATIO), pos= (CENTER_DIST, YPOS))
+rightFix2 = visual.Rect(win, lineColor='white',fillColor='white', size=(0.00, 0.03 * ASPECT_RATIO), pos= (CENTER_DIST, YPOS))
 rightFixBorder = visual.Circle(win, lineColor='black', fillColor='black',
                                size=(0.015, 0.015 * ASPECT_RATIO), pos=(CENTER_DIST, YPOS))
 leftBox = visual.Rect(win, lineColor='white', fillColor='black', 
@@ -93,16 +90,7 @@ ringLinesH = visual.ElementArrayStim(win, fieldPos=(-CENTER_DIST, YPOS + LEFT_SH
                                      nElements=8, xys=ringXY, elementMask=None, elementTex=None, colors='black')
                                       
 # Orientation Task Gabor
-tex1 = np.zeros((256, 256, 3))
-tex2 = np.zeros((256, 256, 3))
-for y in range(256):
-    hCenter = 128 + np.arctan(np.pi / 60) * (y - 128)  # gabor is rotated by 3 degrees
-    for x in range(256):
-        val1 = np.sin((x - hCenter) * 2.0 * np.pi / 256 * 6)  # spatial frequency (sine periods)      
-        val2 = np.sin((x + hCenter) * 2.0 * np.pi / 256 * 6)
-        tex1[y][x] = (val1, val1, val1)
-        tex2[y][x] = (val2, val2, val2)
-gabor = visual.GratingStim(win, mask="gauss", size=[0.024, 0.024 * ASPECT_RATIO])
+gabor = visual.GratingStim(win, mask="gauss", size=[0.024, 0.024 * ASPECT_RATIO], pos=(-CENTER_DIST, 0.12 + YPOS + LEFT_SHIFT))
                                       
 # Location Task Text
 questionL = visual.TextStim(win, pos=(-CENTER_DIST, 0.14 + YPOS + LEFT_SHIFT), height=TEXT_SIZE, wrapWidth=0.23,
@@ -113,6 +101,12 @@ questionR = visual.TextStim(win, pos=(CENTER_DIST, 0.14 + YPOS), height=TEXT_SIZ
                             text='Location?')
 choicesR = visual.TextStim(win, pos=(CENTER_DIST, YPOS), height=TEXT_SIZE, wrapWidth=0.23,
                            text='Left (L)       Right (R)')
+
+# Ring Visibility text
+optionsL = visual.TextStim(win, pos=(-CENTER_DIST, YPOS + LEFT_SHIFT), height=TEXT_SIZE, wrapWidth=0.23,
+                           text='\n1. No \n2. No but not sure \n3. Yes but not sure \n4. Yes')
+optionsR = visual.TextStim(win, pos=(CENTER_DIST, YPOS), height=TEXT_SIZE, wrapWidth=0.23,
+                           text='\n1. No \n2. No but not sure \n3. Yes but not sure \n4. Yes')
 
 # Confirmation Text
 confL = visual.TextStim(win, height=TEXT_SIZE, wrapWidth=0.23, 
@@ -170,9 +164,11 @@ def cleanExit():
 def drawBackground():
     '''Draws the boxes and the fixation points for each eye's view .'''
     leftBox.draw()
-    leftFix.draw()
+    leftFix1.draw()
+    leftFix2.draw()
     rightBox.draw()
-    rightFix.draw()
+    rightFix1.draw()
+    rightFix2.draw()
 
 def showConfirmation():
     '''Displays a message confirming reception of response for 1 second.'''
@@ -403,7 +399,59 @@ def equiluminanceAlt(color1, color2):
     sliderBar.autoDraw = False
     indicator.autoDraw = False
     return (color1, temp2)
-    
+
+def rotatedSineTexture(degrees):
+    '''Returns numpy array of grating texture rotated from vertical by given amount of degrees.'''
+    tex1 = np.zeros((256, 256))
+    slope = np.arctan(degrees * np.pi / 180)  # gabor is rotated by degree amount in layout
+    for y in range(256):
+        for x in range(256):
+            dist = -slope * (y - 128) + (x - 128) / np.sqrt(1 + slope ** 2)
+            val1 = np.sin(dist * 2.0 * np.pi / 256 * 6)  # spatial frequency (sine periods)      
+            tex1[y][x] = val1
+    return tex1
+
+def calibrateDifficulty():
+    '''
+    Returns tilt of gabor patch such that orientation task accuracy is around 75%. 
+    Staircases down from 5 degrees and then up from 1 degree, then averages results.
+    '''
+    def tiltStaircase(tilt, loweringTilt):
+        for reversal in range(10):
+            correctStreak = 0
+            while True:               
+                gabor.pos = (-CENTER_DIST, YPOS + (np.random.randint(0, 2) - 0.5) * 0.24 + LEFT_SHIFT)
+                dir = (np.random.randint(0, 2) - 0.5) * 2.0
+                gabor.tex = rotatedSineTexture(tilt * dir)
+                waitForReady(True)
+                for frameN in range(REFRESH_RATE / 2):
+                    drawBackground()
+                    win.flip()
+                displayPeriod = np.random.randint(0, 10)
+                for frameN in range(REFRESH_RATE):
+                    drawBackground()
+                    if frameN >= displayPeriod * (REFRESH_RATE / 10) and frameN < (displayPeriod + 1) * (REFRESH_RATE / 10):
+                        gabor.draw()
+                    win.flip()
+                passedTask = askForLocation(dir, True)
+                showConfirmation()
+                if passedTask:
+                    correctStreak += 1
+                    if correctStreak == 3:
+                        correctStreak = 0
+                        tilt -= 0.5
+                        if not loweringTilt:
+                            loweringTilt = True
+                            break
+                else:
+                    correctStreak = 0
+                    tilt += 0.5
+                    if loweringTilt:
+                        loweringTilt = False
+                        break               
+    tilt1 = tiltStaircase(5.0, True)
+    return (tilt1 + tiltStaircase(1.0, False)) / 2.0
+                
 def ringPrime(stimColor, ringColor, popLoc):
     '''
     Presents a suppressed ring of 8 cross-circles as a prime. The top cross-circle is of a different color.
@@ -453,16 +501,14 @@ def askVisible():
     event.clearEvents()
     drawBackground()
     questionL.text = 'Did you see a ring of circles?'
-    choicesL.text = 'Yes (L)       No (R)'
     questionR.text = 'Did you see a ring of circles?'
-    choicesR.text = 'Yes (L)       No (R)'
     questionL.draw()
-    choicesL.draw()
+    optionsL.draw()
     questionR.draw()
-    choicesR.draw()
+    optionsR.draw()
     win.flip()  
-    answer = event.waitKeys(keyList=['left', 'right'])
-    return answer[0] == 'left'
+    answer = event.waitKeys(keyList=['1', '2', '3', '4', '5'])
+    return answer[0]
     
 def orientationTask(color1, color2, layout):  
     '''
@@ -473,6 +519,8 @@ def orientationTask(color1, color2, layout):
     Layout tuple format: 
     (color of the popout cross, location (top or bottom) of popout, location of gabor, clockwise tilt of gabor)
     '''
+    tex1 = rotatedSineTexture(abs(layout[3]))
+    tex2 = rotatedSineTexture(-abs(layout[3]))
     waitForReady(True)
     if layout[0] == 1:
         primeVisible = ringPrime(color1, color2, layout[1])
@@ -494,6 +542,7 @@ def orientationTask(color1, color2, layout):
             win.flip()
         passedTask = askForLocation(layout[3], True) 
         responseTime = time.time() - startTime
+        print askVisible()
         OUTPUT_FILE.write(str(layout) + ' ' + str(responseTime) + ' ' + str(passedTask) + '\n')
         event.clearEvents()
     showConfirmation()
@@ -514,8 +563,18 @@ if __name__ == '__main__':
     np.random.shuffle(trialOrder)
     for trialColor in trialOrder:
         circleBreakingTime(colorsToTest[trialColor], True, True)
+        
     extremes = recordPreference(colorsToTest)
     newColors = equiluminanceAlt(extremes[0], extremes[1])
+    tiltMag = calibrateDifficulty()
+
+    # All possible trial configurations for second experiment
+    layouts = []
+    for popColor in [1, 2]:
+        for popLoc in [-0.12, 0.12]:
+            for gabLoc in [-0.12, 0.12]:
+                for gabTilt in [-tiltMag, tiltMag]:
+                    layouts.append((popColor, popLoc, gabLoc, gabTilt))
     trialOrder = []
     for i in range(len(layouts)):
         trialOrder += [i] * SECOND_STAGE_REPETITIONS
