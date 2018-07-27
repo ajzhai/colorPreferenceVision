@@ -5,8 +5,7 @@ import random
 import time
 
 '''
-TODO: make preference ranking interface allow any order of filling in, balance random sides in first exp,
-implement objective location task to assess visibility in second exp, improve answering interface in second exp
+TODO: ask about ring dimensions
 '''
 
 PATH_TO_MONDRIANS = 'Mondrians/newColors/'
@@ -17,7 +16,7 @@ YPOS = 0.1
 LEFT_SHIFT = 0.055
 TEXT_SIZE = 0.038
 REFRESH_RATE = 60  # in Hz
-FIRST_STAGE_REPETITIONS = 10 # per color + side combination
+FIRST_STAGE_REPETITIONS = 1 # per color + side combination
 SECOND_STAGE_REPETITIONS = 15  # per layout 
 
 colorsToTest = [(27, 0, 0), (12, 6, 0), (8, 8, 0), (0, 10, 0), (0, 0, 180), (24, 0, 24)]
@@ -32,10 +31,10 @@ win = visual.Window((1920, 1080), fullscr=True, allowGUI=False,
 ASPECT_RATIO = float(win.size[0]) / win.size[1]
 
 # Background                      
-leftFix1 = visual.Rect(win, lineColor='white', fillColor='white', size=(0.00, 0.029 * ASPECT_RATIO), pos= (-CENTER_DIST, YPOS + LEFT_SHIFT))
-leftFix2 = visual.Rect(win, lineColor='white',fillColor='white', size=(0.03, 0.00 * ASPECT_RATIO), pos= (-CENTER_DIST, YPOS + LEFT_SHIFT))
-rightFix1 = visual.Rect(win, lineColor='white',fillColor='white', size=(0.03, 0.00 * ASPECT_RATIO), pos= (CENTER_DIST, YPOS))
-rightFix2 = visual.Rect(win, lineColor='white',fillColor='white', size=(0.00, 0.03 * ASPECT_RATIO), pos= (CENTER_DIST, YPOS))
+leftFix1 = visual.Rect(win, lineColor='white', fillColor='white', size=(0, 0.029 * ASPECT_RATIO), pos= (-CENTER_DIST, YPOS + LEFT_SHIFT))
+leftFix2 = visual.Rect(win, lineColor='white',fillColor='white', size=(0.03, 0 * ASPECT_RATIO), pos= (-CENTER_DIST, YPOS + LEFT_SHIFT))
+rightFix1 = visual.Rect(win, lineColor='white',fillColor='white', size=(0.03, 0 * ASPECT_RATIO), pos= (CENTER_DIST, YPOS))
+rightFix2 = visual.Rect(win, lineColor='white',fillColor='white', size=(0, 0.03 * ASPECT_RATIO), pos= (CENTER_DIST, YPOS))
 rightFixBorder = visual.Circle(win, lineColor='black', fillColor='black',
                                size=(0.018, 0.018 * ASPECT_RATIO), pos=(CENTER_DIST, YPOS))
 leftBox = visual.Rect(win, lineColor='white', fillColor='black', 
@@ -66,8 +65,9 @@ stim = visual.GratingStim(win, size=(0.018, 0.018 * ASPECT_RATIO),
                        
 # Suppressed Priming Ring of Crosses
 ringXY = []
+ringRadius = 0.04
 for ang in np.arange(0.75, 2.75, .25):
-    ringXY.append((0.12 / ASPECT_RATIO * np.cos(ang * np.pi), 0.12 * np.sin(ang * np.pi)))
+    ringXY.append((ringRadius * np.cos(ang * np.pi), ringRadius * ASPECT_RATIO * np.sin(ang * np.pi)))
 primingRing = visual.ElementArrayStim(win, fieldPos=(-CENTER_DIST, YPOS + LEFT_SHIFT), sizes=(0.018, 0.018 * ASPECT_RATIO), 
                                       nElements=8, xys=ringXY, elementMask=crss.msk, elementTex=None, colorSpace='rgb255')
                                       
@@ -84,11 +84,13 @@ questionR = visual.TextStim(win, pos=(CENTER_DIST, 0.14 + YPOS), height=TEXT_SIZ
 choicesR = visual.TextStim(win, pos=(CENTER_DIST, YPOS), height=TEXT_SIZE, wrapWidth=0.23,
                            text='Left (L)       Right (R)')
 
-# Ring Visibility text
+# Ring Visibility Graphics
 optionsL = visual.TextStim(win, pos=(-CENTER_DIST, YPOS + LEFT_SHIFT), height=TEXT_SIZE, wrapWidth=0.23,
-                           text='\n1. Not visible  \n2. Slightly visible  \n3. Clearly visible ')
+                           text='\n\n\n\n1. Not visible  \n2. Slightly visible  \n3. Clearly visible ')
 optionsR = visual.TextStim(win, pos=(CENTER_DIST, YPOS), height=TEXT_SIZE, wrapWidth=0.23,
-                           text='\n1. Not visible  \n2. Slightly visible  \n3. Clearly visible ')
+                           text='\n\n\n\n1. Not visible  \n2. Slightly visible  \n3. Clearly visible ')
+indicatorL = visual.Rect(win, lineColor='white', fillColor='black', size=(0.4, 0.05 * ASPECT_RATIO))
+indicatorR = visual.Rect(win, lineColor='white', fillColor='black', size=(0.4, 0.05 * ASPECT_RATIO))                           
 
 # Confirmation Text
 confL = visual.TextStim(win, height=TEXT_SIZE, wrapWidth=0.23, 
@@ -192,14 +194,14 @@ def askForLocation(loc, isSecondStage):
     answer = event.waitKeys(keyList=['left', 'right'])
     return (answer[0] == 'left' and loc < 0) or (answer[0] == 'right' and loc > 0)    
     
-def circleBreakingTime(color, askLocation, blinking):
+def circleBreakingTime(color, stimLoc, askLocation, blinking):
     '''
     Runs a full trial of measuring the breaking time for a suppressed circle 
-    stimulus of the given color. Writes results to output text file.
+    stimulus of the given color at the given horizontal location (relative to
+    center of box). Writes results to output text file.
     '''
-    loc = (np.random.randint(0, 2) - 0.5) / 8 # relative to center of box
     stim.color = color
-    stim.pos = (-CENTER_DIST + loc, YPOS + LEFT_SHIFT)
+    stim.pos = (-CENTER_DIST + stimLoc, YPOS + LEFT_SHIFT)
     waitForReady(False)
     fixTime = np.random.randint(0, REFRESH_RATE)
     for frameN in range(fixTime):
@@ -234,9 +236,9 @@ def circleBreakingTime(color, askLocation, blinking):
             break
         win.flip()
     if askLocation:
-        passedTask = askForLocation(loc, False)   
+        passedTask = askForLocation(stimLoc, False)   
         print str(color) + ': ' + str(breakingTime) + ' seconds, test passed=' + str(passedTask)
-        OUTPUT_FILE.write(str(color).replace(' ', '') + ' ' + str(breakingTime) + ' ' + str(passedTask) + '\n')
+        OUTPUT_FILE.write(str(color).replace(' ', '') + ' ' + str(stimLoc) + ' ' + str(breakingTime) + ' ' + str(passedTask) + '\n')
     event.clearEvents()   
     showConfirmation()
 
@@ -250,28 +252,28 @@ def recordPreference(colors):
         circles[color].autoDraw = True
         ranks[color].autoDraw = True   
     instructions.autoDraw = True
-    unusedRanks = []
-    for i in range(1, len(colorsToTest) + 1):
-        unusedRanks.append(str(i))
-    for color in colorsToTest:
-        indicator.pos = (circles[color].pos[0], 0.175)
+    current = 0
+    ranksUsed = 0
+    while ranksUsed < len(colorsToTest):
+        indicator.pos = (circles[colorsToTest[current]].pos[0], 0.175)
         win.flip()
-        input = event.waitKeys(keyList=unusedRanks + ['x'])
-        if input[0] == 'x':
-            event.clearEvents()
+        input = event.waitKeys(keyList=[str(i) for i in range(1, len(colorsToTest) + 1)] + ['left', 'right'])
+        if input[0] == 'left' and current > 0:
+            current -= 1
+        elif input[0] == 'right' and current < len(colorsToTest) - 1:
+            current += 1
+        elif input[0] in [str(i) for i in range(1, len(colorsToTest) + 1)] :       
             for color in colorsToTest:
-                #  erase all the rankings
-                ranks[color].text = '_'
-            recordPreference(colors)
-            break
-        else:
-            ranks[color].text = input[0]
-            unusedRanks.remove(input[0])       
-    if len(unusedRanks) == 0:
-        for color in colorsToTest:
-            OUTPUT_FILE.write(str(color).replace(' ', '') + str(ranks[color].text) + ' ')
-        OUTPUT_FILE.write('\n\n')
-    event.clearEvents()
+                if ranks[color].text == input[0]:
+                    ranks[color].text = '_'  # erase previous choice for that rank
+                    ranksUsed -= 1
+            if ranks[colorsToTest[current]].text == '_':
+                ranksUsed += 1
+            ranks[colorsToTest[current]].text = input[0]
+        event.clearEvents()   
+    for color in colorsToTest:
+        OUTPUT_FILE.write(str(color).replace(' ', '') + str(ranks[color].text) + ' ')
+    OUTPUT_FILE.write('\n\n')
     indicator.autoDraw = False
     for color in colorsToTest:
         circles[color].autoDraw = False
@@ -429,18 +431,19 @@ def calibrateDifficulty():
     tilt1 = tiltStaircase(5.0, True)
     return (tilt1 + tiltStaircase(1.0, False)) / 2.0
                 
-def ringPrime(stimColor, ringColor, popLoc, crossOri):
+def ringPrime(stimColor, ringColor, popLoc, ringLoc):
     '''
     Presents a suppressed ring of 8 cross-circles as a prime. The top cross-circle is of a different color.
     Returns whether or not the subject indicated (by pressing space) that they saw the ring. 
     '''
     for mond in monds1:
-        mond.size = (0.2, 0.2 * ASPECT_RATIO)
+        mond.size = (0.25, 0.25 * ASPECT_RATIO)
         mond.pos = (CENTER_DIST, YPOS)
     stim.size = (0.018, 0.018 * ASPECT_RATIO)  # reusing same stim object from first experiment
-    stim.pos = (-CENTER_DIST, YPOS + popLoc + LEFT_SHIFT)
+    stim.pos = (-CENTER_DIST + popLoc, YPOS + ringLoc + LEFT_SHIFT)
     stim.color = stimColor
     primingRing.colors = ringColor
+    primingRing.fieldPos = (-CENTER_DIST, YPOS + ringLoc + LEFT_SHIFT)
     mondN = 0
     for frameN in range(int(2.5 * REFRESH_RATE)):  
         if int(frameN % (REFRESH_RATE / 10.0)) == 0:  # change mondrian 10 times per second
@@ -467,32 +470,48 @@ def ringPrime(stimColor, ringColor, popLoc, crossOri):
     return False
 
 def askVisible():
-    '''Draws the question asking whether the subject saw the prime and waits for subject to answer.'''
+    '''
+    Draws the question asking whether the subject saw the prime and waits for subject to answer.
+    Returns subjective visibility level (0, 1, or 2) as a string.
+    '''
     event.clearEvents()
-    drawBackground()
-    questionL.text = 'Did you see a ring of circles?'
-    questionR.text = 'Did you see a ring of circles?'
-    questionL.draw()
-    optionsL.draw()
-    questionR.draw()
-    optionsR.draw()
-    win.flip()  
-    answer = event.waitKeys(keyList=['left', 'down', 'right'])
-    return answer[0]
+    questionL.text = 'Did you see any circles with crosses?'
+    questionR.text = 'Did you see any circles with crosses?'
+    current = 0
+    while True:
+        indicatorL.pos = (-CENTER_DIST, -current * 0.045 + YPOS - 0.045 + LEFT_SHIFT)
+        indicatorR.pos = (CENTER_DIST, -current * 0.045 + YPOS - 0.045)
+        drawBackground()
+        indicatorL.draw()
+        indicatorR.draw()
+        questionL.draw()
+        optionsL.draw()
+        questionR.draw()
+        optionsR.draw()
+        win.flip()  
+        answer = event.waitKeys(keyList=['up', 'down', 'space'])
+        if answer[0] == 'up' and current > 0:
+            current -= 1
+        elif answer[0] == 'down' and current < 2:
+            current += 1
+        elif answer[0] == 'space':
+            break
+    return str(current)
 
-def askCrossOrientation():
+def askRingLocation():
+    '''Draws the question asking where the suppressed ring of circles was and waits for subject to answer.'''
     event.clearEvents()
     drawBackground()
-    questionL.text = 'Were the crosses straight or diagonal?'
-    questionR.text = 'Were the crosses straight or diagonal?'
-    choicesL.text = 'Straight (L)    Diagonal (R)'
-    choicesR.text = 'Straight (L)    Diagonal (R)'
+    questionL.text = 'Were the circles with crosses above or below the center?'
+    questionR.text = 'Were the circles with crosses above or below the center?'
+    choicesL.text = 'Above (Up)\n\nBelow (Down)'
+    choicesR.text = 'Above (Up)\n\nBelow (Down)'
     questionL.draw()
     choicesL.draw()
     questionR.draw()
     choicesR.draw()
     win.flip()
-    answer = event.waitKeys(keyList=['left', 'right'])
+    answer = event.waitKeys(keyList=['up', 'down'])
     return answer[0]
     
 def orientationTask(color1, color2, layout):  
@@ -511,11 +530,8 @@ def orientationTask(color1, color2, layout):
         primeVisible = ringPrime(color1, color2, layout[1], layout[4])
     else:
         primeVisible = ringPrime(color2, color1, layout[1], layout[4])
-    if primeVisible:
-        #OUTPUT_FILE.write(str(layout) + ' ' + str(askColor()) + '\n')
-        pass
-    else:
-        gabor.pos = (-CENTER_DIST, YPOS + layout[2] + LEFT_SHIFT)
+    if not primeVisible:
+        gabor.pos = (-CENTER_DIST + layout[2], YPOS + layout[4] + LEFT_SHIFT)
         if layout[3] > 0:
             gabor.tex = tex1
         else:
@@ -527,10 +543,8 @@ def orientationTask(color1, color2, layout):
             win.flip()
         passedTask = askForLocation(layout[3], True) 
         responseTime = time.time() - startTime
-        showConfirmation()
-        print askVisible()
-        print askCrossOrientation()
-        OUTPUT_FILE.write(str(layout) + ' ' + str(responseTime) + ' ' + str(passedTask) + '\n')
+        OUTPUT_FILE.write(str(layout) + ' ' + str(responseTime) + ' ' + str(passedTask) + 
+                          ' ' + askVisible() + ' ' + askRingLocation() + '\n')
         event.clearEvents()
     showConfirmation()
     
@@ -544,12 +558,17 @@ def showEndMsg():
 if __name__ == '__main__':
     print "Running at " + str(win.size) + " resolution with refresh rate of " + str(win.getActualFrameRate()) + " Hz..."
     print "Conducting experiment 1 using the following colors: " + str(colorsToTest)
+    # All possible trial configurations for first experiment
+    layouts = []
+    for color in colorsToTest:
+        for stimLoc in [-0.0625, 0.0625]:
+            layouts.append((color, stimLoc))
     trialOrder = []
-    for i in range(len(colorsToTest)):
+    for i in range(len(layouts)):
         trialOrder += [i] * FIRST_STAGE_REPETITIONS
     np.random.shuffle(trialOrder)
-    for trialColor in trialOrder:
-        circleBreakingTime(colorsToTest[trialColor], True, True)
+    for layoutN in trialOrder:
+        circleBreakingTime(layouts[layoutN][0], layouts[layoutN][1], True, True)
         
     extremes = recordPreference(colorsToTest)
     newColors = equiluminanceAlt(extremes[0], extremes[1])
@@ -559,11 +578,11 @@ if __name__ == '__main__':
     # All possible trial configurations for second experiment
     layouts = []
     for popColor in [1, 2]:
-        for popLoc in [-0.12, 0.12]:
-            for gabLoc in [-0.12, 0.12]:
+        for popLoc in [-ringRadius, ringRadius]:
+            for gabLoc in [-ringRadius, ringRadius]:
                 for gabTilt in [-tiltMag, tiltMag]:
-                    for crossOri in [0, 45]:
-                        layouts.append((popColor, popLoc, gabLoc, gabTilt, crossOri))
+                    for ringLoc in [-0.115, 0.115]:
+                        layouts.append((popColor, popLoc, gabLoc, gabTilt, ringLoc))
     trialOrder = []
     for i in range(len(layouts)):
         trialOrder += [i] * SECOND_STAGE_REPETITIONS
