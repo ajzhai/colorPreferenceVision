@@ -10,14 +10,14 @@ TODO: ask about ring dimensions
 
 PATH_TO_MONDRIANS = 'Mondrians/newColors/'
 PATH_TO_STIMULI = 'ColorStimuli/'
-OUTPUT_FILE = open('colorPrefData/testJuly26.txt', 'a')
+OUTPUT_FILE = open('colorPrefData/testJuly30.txt', 'a')
 CENTER_DIST = 0.4  # positive for right-eye dominant, negative for left-eye dominant
 YPOS = 0.1
 LEFT_SHIFT = 0.055
 TEXT_SIZE = 0.038
 REFRESH_RATE = 60  # in Hz
-FIRST_STAGE_REPETITIONS = 1 # per color + side combination
-SECOND_STAGE_REPETITIONS = 15  # per layout 
+FIRST_STAGE_REPETITIONS = 0 # per color + side combination
+SECOND_STAGE_REPETITIONS = 5  # per layout 
 
 colorsToTest = [(27, 0, 0), (12, 6, 0), (8, 8, 0), (0, 10, 0), (0, 0, 180), (24, 0, 24)]
 tweak = 0.3
@@ -285,7 +285,7 @@ def recordPreference(colors):
     return (mostFav, leastFav)
     
 def equiluminance(color1, color2):
-    '''Employs heterochromatic flicker photometry to return equiluminant colors of given hues.'''
+    '''CURRENTLY UNUSED: Employs heterochromatic flicker photometry to return equiluminant colors of given hues.'''
     def multiplyTuple(c, factor):
         return (int(c[0] * factor), int(c[1] * factor), int(c[2] * factor))
     flickerer.autoDraw = True
@@ -418,23 +418,25 @@ def calibrateDifficulty():
                     correctStreak += 1
                     if correctStreak == 3:
                         correctStreak = 0
-                        tilt -= 0.5
-                        if not loweringTilt:
-                            loweringTilt = True
-                            break
+                        if abs(tilt) > 0.1:
+                            tilt -= 0.5
+                            if not loweringTilt:
+                                loweringTilt = True
+                                break
                 else:
                     correctStreak = 0
                     tilt += 0.5
                     if loweringTilt:
                         loweringTilt = False
-                        break               
+                        break
+        return tilt
     tilt1 = tiltStaircase(5.0, True)
     return (tilt1 + tiltStaircase(1.0, False)) / 2.0
                 
 def ringPrime(stimColor, ringColor, popLoc, ringLoc):
     '''
     Presents a suppressed ring of 8 cross-circles as a prime. The top cross-circle is of a different color.
-    Returns whether or not the subject indicated (by pressing space) that they saw the ring. 
+    DEPRECATED: Returns whether or not the subject indicated (by pressing space) that they saw the ring. 
     '''
     for mond in monds1:
         mond.size = (0.25, 0.25 * ASPECT_RATIO)
@@ -463,9 +465,11 @@ def ringPrime(stimColor, ringColor, popLoc, ringLoc):
         rightFixBorder.draw()
         rightFix1.draw()
         rightFix2.draw()
+        '''
         if event.getKeys(keyList=['space']):
             event.clearEvents()
             return True
+        '''
         win.flip()
     return False
 
@@ -572,8 +576,7 @@ if __name__ == '__main__':
         
     extremes = recordPreference(colorsToTest)
     newColors = equiluminanceAlt(extremes[0], extremes[1])
-    #tiltMag = calibrateDifficulty()
-    tiltMag = 5
+    tiltMag = calibrateDifficulty()
     
     # All possible trial configurations for second experiment
     layouts = []
