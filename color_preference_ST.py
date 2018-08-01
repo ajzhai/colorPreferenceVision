@@ -37,10 +37,25 @@ rightFix1 = visual.Rect(win, lineColor='white',fillColor='white', size=(0.03, 0 
 rightFix2 = visual.Rect(win, lineColor='white',fillColor='white', size=(0, 0.03 * ASPECT_RATIO), pos= (CENTER_DIST, YPOS))
 rightFixBorder = visual.Circle(win, lineColor='black', fillColor='black',
                                size=(0.018, 0.018 * ASPECT_RATIO), pos=(CENTER_DIST, YPOS))
-leftBox = visual.Rect(win, lineColor='white', fillColor='black', 
-                      size=(0.54, 0.54 * ASPECT_RATIO), pos=(-CENTER_DIST, YPOS + LEFT_SHIFT))
-rightBox = visual.Rect(win, lineColor='white', fillColor='black', 
-                       size=(0.54, 0.54 * ASPECT_RATIO), pos=(CENTER_DIST, YPOS))
+lattice = np.zeros((256, 256))
+for y in range(256):
+     if y % 28 >= 14: 
+         for x in range(256):
+            lattice[y][x] = 1
+for x in range(256):
+     if x % 28 >= 14: 
+         for y in range(256):
+            lattice[y][x] = 1
+sqrOutline = np.ones((256, 256))
+for y in range(3, 253):
+    for x in range(3, 253):
+        sqrOutline[y][x] = -1
+leftBox = visual.GratingStim(win, color='white', tex=lattice, mask=sqrOutline,
+                             size=(0.27, 0.27 * ASPECT_RATIO), pos=(-CENTER_DIST, YPOS + LEFT_SHIFT))
+#rightBox = visual.Rect(win, lineColor='white', fillColor='black', 
+ #                      size=(0.54, 0.54 * ASPECT_RATIO), pos=(CENTER_DIST, YPOS))
+rightBox = visual.GratingStim(win, color='white', tex=lattice, mask=sqrOutline,
+                              size=(0.27, 0.27 * ASPECT_RATIO), pos=(CENTER_DIST, YPOS))
 
 # Instructions
 instructL1 = visual.TextStim(win, pos=(-CENTER_DIST, 0.14 + YPOS + LEFT_SHIFT), height=TEXT_SIZE, wrapWidth=0.23,
@@ -65,9 +80,9 @@ stim = visual.GratingStim(win, size=(0.018, 0.018 * ASPECT_RATIO),
                        
 # Suppressed Priming Ring of Crosses
 ringXY = []
-ringRadius = 0.04
+ringRadius = 0.12  # vertical
 for ang in np.arange(0.75, 2.75, .25):
-    ringXY.append((ringRadius * np.cos(ang * np.pi), ringRadius * ASPECT_RATIO * np.sin(ang * np.pi)))
+    ringXY.append((ringRadius / ASPECT_RATIO * np.cos(ang * np.pi), ringRadius * np.sin(ang * np.pi)))
 primingRing = visual.ElementArrayStim(win, fieldPos=(-CENTER_DIST, YPOS + LEFT_SHIFT), sizes=(0.018, 0.018 * ASPECT_RATIO), 
                                       nElements=8, xys=ringXY, elementMask=crss.msk, elementTex=None, colorSpace='rgb255')
                                       
@@ -90,7 +105,23 @@ optionsL = visual.TextStim(win, pos=(-CENTER_DIST, YPOS + LEFT_SHIFT), height=TE
 optionsR = visual.TextStim(win, pos=(CENTER_DIST, YPOS), height=TEXT_SIZE, wrapWidth=0.23,
                            text='\n\n\n\n1. Not visible  \n2. Slightly visible  \n3. Clearly visible ')
 indicatorL = visual.Rect(win, lineColor='white', fillColor='black', size=(0.4, 0.05 * ASPECT_RATIO))
-indicatorR = visual.Rect(win, lineColor='white', fillColor='black', size=(0.4, 0.05 * ASPECT_RATIO))                           
+indicatorR = visual.Rect(win, lineColor='white', fillColor='black', size=(0.4, 0.05 * ASPECT_RATIO))
+stimL1 = visual.GratingStim(win, size=(0.018, 0.018 * ASPECT_RATIO), pos=(-CENTER_DIST - 0.068, YPOS + LEFT_SHIFT),
+                            colorSpace='rgb255', tex=None, mask=crss.msk)
+stimL2 = visual.GratingStim(win, size=(0.018, 0.018 * ASPECT_RATIO), pos=(-CENTER_DIST + 0.068, YPOS + LEFT_SHIFT),
+                            colorSpace='rgb255', tex=None, mask=crss.msk)
+stimR1 = visual.GratingStim(win, size=(0.018, 0.018 * ASPECT_RATIO), pos=(CENTER_DIST - 0.068, YPOS),
+                            colorSpace='rgb255', tex=None, mask=crss.msk)
+stimR2 = visual.GratingStim(win, size=(0.018, 0.018 * ASPECT_RATIO), pos=(CENTER_DIST + 0.068, YPOS),
+                            colorSpace='rgb255', tex=None, mask=crss.msk)
+upperHalfL = visual.GratingStim(win, size=(0.24, 0.12 * ASPECT_RATIO), pos=(-CENTER_DIST, 0.11 + YPOS + LEFT_SHIFT), 
+                                color='darkturquoise', tex=None, mask='gauss')
+lowerHalfL = visual.GratingStim(win, size=(0.24, 0.12 * ASPECT_RATIO), pos=(-CENTER_DIST, -0.11 + YPOS + LEFT_SHIFT), 
+                                color='darkturquoise', tex=None, mask='gauss')
+upperHalfR = visual.GratingStim(win, size=(0.24, 0.12 * ASPECT_RATIO), pos=(CENTER_DIST, 0.11 + YPOS), 
+                                color='darkturquoise', tex=None, mask='gauss')
+lowerHalfR = visual.GratingStim(win, size=(0.24, 0.12 * ASPECT_RATIO), pos=(CENTER_DIST, -0.11 + YPOS), 
+                                color='darkturquoise', tex=None, mask='gauss')
 
 # Confirmation Text
 confL = visual.TextStim(win, height=TEXT_SIZE, wrapWidth=0.23, 
@@ -433,7 +464,7 @@ def calibrateDifficulty():
     tilt1 = tiltStaircase(5.0, True)
     return (tilt1 + tiltStaircase(1.0, False)) / 2.0
                 
-def ringPrime(stimColor, ringColor, popLoc, ringLoc):
+def ringPrime(stimColor, ringColor, popLoc):
     '''
     Presents a suppressed ring of 8 cross-circles as a prime. The top cross-circle is of a different color.
     DEPRECATED: Returns whether or not the subject indicated (by pressing space) that they saw the ring. 
@@ -442,10 +473,10 @@ def ringPrime(stimColor, ringColor, popLoc, ringLoc):
         mond.size = (0.25, 0.25 * ASPECT_RATIO)
         mond.pos = (CENTER_DIST, YPOS)
     stim.size = (0.018, 0.018 * ASPECT_RATIO)  # reusing same stim object from first experiment
-    stim.pos = (-CENTER_DIST + popLoc, YPOS + ringLoc + LEFT_SHIFT)
+    stim.pos = (-CENTER_DIST, YPOS + popLoc + LEFT_SHIFT)
     stim.color = stimColor
     primingRing.colors = ringColor
-    primingRing.fieldPos = (-CENTER_DIST, YPOS + ringLoc + LEFT_SHIFT)
+    primingRing.fieldPos = (-CENTER_DIST, YPOS + LEFT_SHIFT)
     mondN = 0
     for frameN in range(int(2.5 * REFRESH_RATE)):  
         if int(frameN % (REFRESH_RATE / 10.0)) == 0:  # change mondrian 10 times per second
@@ -502,20 +533,55 @@ def askVisible():
             break
     return str(current)
 
-def askRingLocation():
-    '''Draws the question asking where the suppressed ring of circles was and waits for subject to answer.'''
+def askLocationsSeen():
     event.clearEvents()
+    questionL.text = '\n\n\n\n\n\nUse the up and down arrow keys to indicate where in \n\nthe box you ' + \
+                     'saw the circles in, then press space to submit.'
+    questionR.text = '\n\n\n\n\n\nUse the up and down arrow keys to indicate where in \n\nthe box you ' + \
+                     'saw the circles in, then press space to submit.'
+    upSelected, downSelected = False, False
+    while True:
+        drawBackground()
+        if upSelected:
+            upperHalfL.draw()
+            upperHalfR.draw()
+        if downSelected:
+            lowerHalfL.draw()
+            lowerHalfR.draw()
+        questionL.draw()
+        questionR.draw()
+        win.flip()
+        answer = event.waitKeys(keyList=['up', 'down', 'space'])
+        if answer[0] == 'up':
+            upSelected = not upSelected
+        elif answer[0] == 'down':
+            downSelected = not downSelected
+        elif answer[0] == 'space':
+            break
+    return (upSelected, downSelected)
+    
+def askColorSeen(color1, color2):
+    '''Draws the question asking what suppressed colors were seen and waits for subject to answer.'''
+    event.clearEvents()
+    stimL1.color = color1
+    stimL2.color = color2
+    stimR1.color = color1
+    stimR2.color = color2
     drawBackground()
-    questionL.text = 'Were the circles with crosses above or below the center?'
-    questionR.text = 'Were the circles with crosses above or below the center?'
-    choicesL.text = 'Above (Up)\n\nBelow (Down)'
-    choicesR.text = 'Above (Up)\n\nBelow (Down)'
+    questionL.text = 'Which of the following colors did you see?'
+    questionR.text = 'Which of the following colors did you see?'
+    choicesL.text = '\n\n\n\n(L)                 (R)\n\n  Both (space)'
+    choicesR.text = '\n\n\n\n(L)                 (R)\n\n  Both (space)'
     questionL.draw()
     choicesL.draw()
+    stimL1.draw()
+    stimL2.draw()
     questionR.draw()
     choicesR.draw()
+    stimR1.draw()
+    stimR2.draw()
     win.flip()
-    answer = event.waitKeys(keyList=['up', 'down'])
+    answer = event.waitKeys(keyList=['left', 'right'])
     return answer[0]
     
 def orientationTask(color1, color2, layout):  
@@ -531,11 +597,11 @@ def orientationTask(color1, color2, layout):
     tex2 = rotatedSineTexture(-abs(layout[3]))
     waitForReady(True)
     if layout[0] == 1:
-        primeVisible = ringPrime(color1, color2, layout[1], layout[4])
+        primeVisible = ringPrime(color1, color2, layout[1])
     else:
-        primeVisible = ringPrime(color2, color1, layout[1], layout[4])
+        primeVisible = ringPrime(color2, color1, layout[1])
     if not primeVisible:
-        gabor.pos = (-CENTER_DIST + layout[2], YPOS + layout[4] + LEFT_SHIFT)
+        gabor.pos = (-CENTER_DIST, YPOS + layout[2] + LEFT_SHIFT)
         if layout[3] > 0:
             gabor.tex = tex1
         else:
@@ -547,8 +613,8 @@ def orientationTask(color1, color2, layout):
             win.flip()
         passedTask = askForLocation(layout[3], True) 
         responseTime = time.time() - startTime
-        OUTPUT_FILE.write(str(layout) + ' ' + str(responseTime) + ' ' + str(passedTask) + 
-                          ' ' + askVisible() + ' ' + askRingLocation() + '\n')
+        OUTPUT_FILE.write(str(layout) + ' ' + str(responseTime) + ' ' + str(passedTask) + ' ' + askVisible() + 
+                          ' ' + str(askLocationsSeen()).replace(' ', '') + ' ' + askColorSeen(color1, color2) + '\n')
         event.clearEvents()
     showConfirmation()
     
@@ -576,7 +642,8 @@ if __name__ == '__main__':
         
     extremes = recordPreference(colorsToTest)
     newColors = equiluminanceAlt(extremes[0], extremes[1])
-    tiltMag = calibrateDifficulty()
+    #tiltMag = calibrateDifficulty()
+    tiltMag = 5
     
     # All possible trial configurations for second experiment
     layouts = []
@@ -584,8 +651,7 @@ if __name__ == '__main__':
         for popLoc in [-ringRadius, ringRadius]:
             for gabLoc in [-ringRadius, ringRadius]:
                 for gabTilt in [-tiltMag, tiltMag]:
-                    for ringLoc in [-0.115, 0.115]:
-                        layouts.append((popColor, popLoc, gabLoc, gabTilt, ringLoc))
+                    layouts.append((popColor, popLoc, gabLoc, gabTilt))
     trialOrder = []
     for i in range(len(layouts)):
         trialOrder += [i] * SECOND_STAGE_REPETITIONS
