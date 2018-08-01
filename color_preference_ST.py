@@ -10,7 +10,7 @@ TODO: ask about ring dimensions
 
 PATH_TO_MONDRIANS = 'Mondrians/newColors/'
 PATH_TO_STIMULI = 'ColorStimuli/'
-OUTPUT_FILE = open('colorPrefData/testJuly30.txt', 'a')
+OUTPUT_FILE = open('colorPrefData/testAug1.txt', 'a')
 CENTER_DIST = 0.4  # positive for right-eye dominant, negative for left-eye dominant
 YPOS = 0.1
 LEFT_SHIFT = 0.055
@@ -19,7 +19,7 @@ REFRESH_RATE = 60  # in Hz
 FIRST_STAGE_REPETITIONS = 0 # per color + side combination
 SECOND_STAGE_REPETITIONS = 5  # per layout 
 
-colorsToTest = [(27, 0, 0), (12, 6, 0), (8, 8, 0), (0, 10, 0), (0, 0, 180), (24, 0, 24)]
+colorsToTest = [(27, 0, 0), (12, 6, 0), (8, 8, 0), (0, 10, 0), (0, 0, 120), (24, 0, 24)]
 tweak = 0.3
 for i, color in enumerate(colorsToTest):
     colorsToTest[i] = (int(round(color[0] * tweak)), int(round(color[1] * tweak)), int(round(color[2] * tweak)))
@@ -302,9 +302,10 @@ def recordPreference(colors):
                 ranksUsed += 1
             ranks[colorsToTest[current]].text = input[0]
         event.clearEvents()   
+    OUTPUT_FILE.write('preferences: ')
     for color in colorsToTest:
         OUTPUT_FILE.write(str(color).replace(' ', '') + str(ranks[color].text) + ' ')
-    OUTPUT_FILE.write('\n\n')
+    OUTPUT_FILE.write('\n')
     indicator.autoDraw = False
     for color in colorsToTest:
         circles[color].autoDraw = False
@@ -388,7 +389,7 @@ def equiluminanceAlt(color1, color2):
                 motionGrating2.mask = -msk1
             else:
                 motionGrating1.color = (0, 0, 0)
-                motionGrating2.color = (16, 16, 16)
+                motionGrating2.color = (8, 8, 8)
                 motionGrating1.mask = msk2
                 motionGrating2.mask = -msk2
             win.flip()                         
@@ -409,6 +410,7 @@ def equiluminanceAlt(color1, color2):
     motionGrating2.autoDraw = False
     sliderBar.autoDraw = False
     indicator.autoDraw = False
+    OUTPUT_FILE.write('equiluminantColor: ' + str(temp2).replace(' ', '') + '\n') 
     return (color1, temp2)
 
 def rotatedSineTexture(degrees):
@@ -534,6 +536,7 @@ def askVisible():
     return str(current)
 
 def askLocationsSeen():
+    '''Lets the subject select areas in which they saw patches and returns selections.'''
     event.clearEvents()
     questionL.text = '\n\n\n\n\n\nUse the up and down arrow keys to indicate where in \n\nthe box you ' + \
                      'saw the circles in, then press space to submit.'
@@ -581,7 +584,7 @@ def askColorSeen(color1, color2):
     stimR1.draw()
     stimR2.draw()
     win.flip()
-    answer = event.waitKeys(keyList=['left', 'right'])
+    answer = event.waitKeys(keyList=['left', 'right', 'space'])
     return answer[0]
     
 def orientationTask(color1, color2, layout):  
@@ -628,6 +631,7 @@ def showEndMsg():
 if __name__ == '__main__':
     print "Running at " + str(win.size) + " resolution with refresh rate of " + str(win.getActualFrameRate()) + " Hz..."
     print "Conducting experiment 1 using the following colors: " + str(colorsToTest)
+    OUTPUT_FILE.write('START1\n')
     # All possible trial configurations for first experiment
     layouts = []
     for color in colorsToTest:
@@ -639,12 +643,15 @@ if __name__ == '__main__':
     np.random.shuffle(trialOrder)
     for layoutN in trialOrder:
         circleBreakingTime(layouts[layoutN][0], layouts[layoutN][1], True, True)
+    OUTPUT_FILE.write('END1\n')
         
     extremes = recordPreference(colorsToTest)
     newColors = equiluminanceAlt(extremes[0], extremes[1])
     #tiltMag = calibrateDifficulty()
     tiltMag = 5
+    print "Optimal tilt magnitude calibrated to be: " + str(tiltMag) + " degrees..."
     
+    OUTPUT_FILE.write('START2\n')
     # All possible trial configurations for second experiment
     layouts = []
     for popColor in [1, 2]:
@@ -658,6 +665,7 @@ if __name__ == '__main__':
     np.random.shuffle(trialOrder)
     for layoutN in trialOrder:
         orientationTask(newColors[0], newColors[1], layouts[layoutN])
+    OUTPUT_FILE.write('END2\n')
     showEndMsg()
     
 # Global cleanup
