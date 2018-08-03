@@ -5,7 +5,7 @@ import random
 import time
 
 '''
-TODO: ask about ring dimensions
+TODO: ensure ring suppression
 '''
 
 PATH_TO_MONDRIANS = 'Mondrians/newColors/'
@@ -16,10 +16,10 @@ YPOS = 0.1
 LEFT_SHIFT = 0.055
 TEXT_SIZE = 0.038
 REFRESH_RATE = 60  # in Hz
-FIRST_STAGE_REPETITIONS = 0 # per color + side combination
+FIRST_STAGE_REPETITIONS = 15 # per color + side combination
 SECOND_STAGE_REPETITIONS = 5  # per layout 
 
-colorsToTest = [(27, 0, 0), (12, 6, 0), (8, 8, 0), (0, 10, 0), (0, 0, 120), (24, 0, 24)]
+colorsToTest = [(27, 0, 0), (12, 6, 0), (8, 8, 0), (0, 10, 0), (0, 0, 90), (24, 0, 24)]
 tweak = 0.3
 for i, color in enumerate(colorsToTest):
     colorsToTest[i] = (int(round(color[0] * tweak)), int(round(color[1] * tweak)), int(round(color[2] * tweak)))
@@ -87,7 +87,8 @@ primingRing = visual.ElementArrayStim(win, fieldPos=(-CENTER_DIST, YPOS + LEFT_S
                                       nElements=8, xys=ringXY, elementMask=crss.msk, elementTex=None, colorSpace='rgb255')
                                       
 # Orientation Task Gabor
-gabor = visual.GratingStim(win, mask="gauss", size=[0.024, 0.024 * ASPECT_RATIO], pos=(-CENTER_DIST, 0.12 + YPOS + LEFT_SHIFT))
+gabor = visual.GratingStim(win, mask="gauss", size=[0.024, 0.024 * ASPECT_RATIO], 
+                           pos=(-CENTER_DIST, 0.12 + YPOS + LEFT_SHIFT))
                                       
 # Location Task Text
 questionL = visual.TextStim(win, pos=(-CENTER_DIST, 0.14 + YPOS + LEFT_SHIFT), height=TEXT_SIZE, wrapWidth=0.23,
@@ -114,6 +115,7 @@ stimR1 = visual.GratingStim(win, size=(0.018, 0.018 * ASPECT_RATIO), pos=(CENTER
                             colorSpace='rgb255', tex=None, mask=crss.msk)
 stimR2 = visual.GratingStim(win, size=(0.018, 0.018 * ASPECT_RATIO), pos=(CENTER_DIST + 0.068, YPOS),
                             colorSpace='rgb255', tex=None, mask=crss.msk)
+'''
 upperHalfL = visual.GratingStim(win, size=(0.24, 0.12 * ASPECT_RATIO), pos=(-CENTER_DIST, 0.11 + YPOS + LEFT_SHIFT), 
                                 color='darkturquoise', tex=None, mask='gauss')
 lowerHalfL = visual.GratingStim(win, size=(0.24, 0.12 * ASPECT_RATIO), pos=(-CENTER_DIST, -0.11 + YPOS + LEFT_SHIFT), 
@@ -122,6 +124,27 @@ upperHalfR = visual.GratingStim(win, size=(0.24, 0.12 * ASPECT_RATIO), pos=(CENT
                                 color='darkturquoise', tex=None, mask='gauss')
 lowerHalfR = visual.GratingStim(win, size=(0.24, 0.12 * ASPECT_RATIO), pos=(CENTER_DIST, -0.11 + YPOS), 
                                 color='darkturquoise', tex=None, mask='gauss')
+upSelected, downSelected = False, False
+    while True:
+        drawBackground()
+        if upSelected:
+            upperHalfL.draw()
+            upperHalfR.draw()
+        if downSelected:
+            lowerHalfL.draw()
+            lowerHalfR.draw()
+        questionL.draw()
+        questionR.draw()
+        win.flip()
+        answer = event.waitKeys(keyList=['up', 'down', 'space'])
+        if answer[0] == 'up':
+            upSelected = not upSelected
+        elif answer[0] == 'down':
+            downSelected = not downSelected
+        elif answer[0] == 'space':
+            break
+    return (upSelected, downSelected)
+'''
 
 # Confirmation Text
 confL = visual.TextStim(win, height=TEXT_SIZE, wrapWidth=0.23, 
@@ -141,8 +164,8 @@ indicator = visual.Rect(win, lineColor='white', fillColor='black', size=(0.12, 0
                            pos=(-(len(colorsToTest) - 1) / 2.0 * 0.1, 0.175))
 instructions = visual.TextStim(win, pos=(0, 0.4), height=TEXT_SIZE, wrapWidth = 0.8,
                                text='Enter your preference ranking (1 for most favorite, 6 for least ' + \
-                                    'favorite) for the indicated color. Press x to clear all if you ' + \
-                                    'make a mistake. The experiment will continue once all 6 colors have been ranked.')
+                                    'favorite) for the indicated color. Use the arrow keys to move the ' + \
+                                    'indicator around. The experiment will continue once all 6 colors have been ranked.')
 flickerer = visual.Circle(win, pos=(0, 0.1), size=(0.18, 0.18 * ASPECT_RATIO), 
                           fillColorSpace='rgb255', lineColorSpace='rgb255')                                   
 sliderBar = visual.Line(win, start=(-0.3, -0.2), end=(0.3, -0.2), lineColor='gray')
@@ -420,7 +443,7 @@ def rotatedSineTexture(degrees):
     for y in range(256):
         for x in range(256):
             dist = (-slope * (y - 128) + (x - 128)) / np.sqrt(1 + slope ** 2)
-            val1 = np.sin(dist * 2.0 * np.pi / 256 * 4)  # spatial frequency (sine periods)      
+            val1 = np.cos(dist * 2.0 * np.pi / 256 * 4)  # spatial frequency (sine periods)      
             tex1[y][x] = val1
     return tex1
 
@@ -465,7 +488,15 @@ def calibrateDifficulty():
         return tilt
     tilt1 = tiltStaircase(5.0, True)
     return (tilt1 + tiltStaircase(1.0, False)) / 2.0
-                
+
+def drawWarning():
+    '''Warns the subject that second experiment is about to begin and waits for ready.'''
+    instructions.text = "Press the 'x' key when you are ready to begin session 2."
+    instructions.draw()
+    win.flip()
+    event.waitKeys(keyList=['x'])
+    event.clearEvents()
+    
 def ringPrime(stimColor, ringColor, popLoc):
     '''
     Presents a suppressed ring of 8 cross-circles as a prime. The top cross-circle is of a different color.
@@ -487,12 +518,12 @@ def ringPrime(stimColor, ringColor, popLoc):
                 mondN = 0
             #monds1[mondN].opacity = np.random.randint(70, 101) / 100.0
         drawBackground()
-        if frameN % int(REFRESH_RATE * 0.5) < REFRESH_RATE / 5 + 6:
-            if frameN < 10 * REFRESH_RATE:
-                monds1[mondN].draw()
-            if frameN % int(REFRESH_RATE * 0.5) >= 3 and frameN % int(REFRESH_RATE * 0.5) < REFRESH_RATE / 5 + 3:
-                stim.opacity = (frameN % int(REFRESH_RATE * 0.5) - 2) / (REFRESH_RATE / 5.0 + .01)
-                primingRing.opacities = (frameN % int(REFRESH_RATE * 0.5) - 2) / (REFRESH_RATE / 5.0 + .01)
+        cycleProgress = frameN % int(REFRESH_RATE * 0.5)
+        if cycleProgress < REFRESH_RATE / 5 + 6:
+            monds1[mondN].draw()
+            if cycleProgress >= 3 and cycleProgress < REFRESH_RATE / 5 + 3:
+                stim.opacity = (cycleProgress - 2) / (REFRESH_RATE / 5.0 + .01)
+                primingRing.opacities = stim.opacity
                 primingRing.draw()
                 stim.draw()
         rightFixBorder.draw()
@@ -509,7 +540,7 @@ def ringPrime(stimColor, ringColor, popLoc):
 def askVisible():
     '''
     Draws the question asking whether the subject saw the prime and waits for subject to answer.
-    Returns subjective visibility level (0, 1, or 2) as a string.
+    Returns subjective visibility level (0, 1, or 2) as an integer.
     '''
     event.clearEvents()
     questionL.text = 'Did you see any circles with crosses?'
@@ -533,35 +564,31 @@ def askVisible():
             current += 1
         elif answer[0] == 'space':
             break
-    return str(current)
+    return current
 
-def askLocationsSeen():
+def askLocationsSeen(claimedVisible):
     '''Lets the subject select areas in which they saw patches and returns selections.'''
     event.clearEvents()
-    questionL.text = '\n\n\n\n\n\nUse the up and down arrow keys to indicate where in \n\nthe box you ' + \
-                     'saw the circles in, then press space to submit.'
-    questionR.text = '\n\n\n\n\n\nUse the up and down arrow keys to indicate where in \n\nthe box you ' + \
-                     'saw the circles in, then press space to submit.'
-    upSelected, downSelected = False, False
-    while True:
-        drawBackground()
-        if upSelected:
-            upperHalfL.draw()
-            upperHalfR.draw()
-        if downSelected:
-            lowerHalfL.draw()
-            lowerHalfR.draw()
-        questionL.draw()
-        questionR.draw()
-        win.flip()
-        answer = event.waitKeys(keyList=['up', 'down', 'space'])
-        if answer[0] == 'up':
-            upSelected = not upSelected
-        elif answer[0] == 'down':
-            downSelected = not downSelected
-        elif answer[0] == 'space':
-            break
-    return (upSelected, downSelected)
+    if claimedVisible:
+        questionL.text = 'Location?\n'
+        questionR.text = 'Location?\n'
+        choicesL.text = '      Top    (up)\n\n    Both    (space)\n\nBottom    (down)'
+        choicesR.text = '      Top    (up)\n\n    Both    (space)\n\nBottom    (down)'
+        keys = ['up', 'down', 'space']
+    else:
+        questionL.text = 'Two colors?'
+        questionR.text = 'Two colors?'
+        choicesL.text = '      Top (up)\n\nBottom (down)'
+        choicesR.text = '      Top (up)\n\nBottom (down)'
+        keys = ['up', 'down']   
+    drawBackground()
+    questionL.draw()
+    choicesL.draw()
+    questionR.draw()
+    choicesR.draw()
+    win.flip()
+    answer = event.waitKeys(keyList=keys)
+    return answer[0]   
     
 def askColorSeen(color1, color2):
     '''Draws the question asking what suppressed colors were seen and waits for subject to answer.'''
@@ -616,8 +643,12 @@ def orientationTask(color1, color2, layout):
             win.flip()
         passedTask = askForLocation(layout[3], True) 
         responseTime = time.time() - startTime
-        OUTPUT_FILE.write(str(layout) + ' ' + str(responseTime) + ' ' + str(passedTask) + ' ' + askVisible() + 
-                          ' ' + str(askLocationsSeen()).replace(' ', '') + ' ' + askColorSeen(color1, color2) + '\n')
+        visibility = askVisible()
+        OUTPUT_FILE.write(str(layout) + ' ' + str(responseTime) + ' ' + str(passedTask) + ' ' + str(visibility) + 
+                          ' ' + str(askLocationsSeen(bool(visibility))))
+        if visibility > 0:
+            OUTPUT_FILE.write(' ' + askColorSeen(color1, color2))
+        OUTPUT_FILE.write('\n')
         event.clearEvents()
     showConfirmation()
     
@@ -647,8 +678,7 @@ if __name__ == '__main__':
         
     extremes = recordPreference(colorsToTest)
     newColors = equiluminanceAlt(extremes[0], extremes[1])
-    #tiltMag = calibrateDifficulty()
-    tiltMag = 5
+    tiltMag = calibrateDifficulty()
     print "Optimal tilt magnitude calibrated to be: " + str(tiltMag) + " degrees..."
     
     OUTPUT_FILE.write('START2\n')
@@ -663,6 +693,7 @@ if __name__ == '__main__':
     for i in range(len(layouts)):
         trialOrder += [i] * SECOND_STAGE_REPETITIONS
     np.random.shuffle(trialOrder)
+    drawWarning()
     for layoutN in trialOrder:
         orientationTask(newColors[0], newColors[1], layouts[layoutN])
     OUTPUT_FILE.write('END2\n')
