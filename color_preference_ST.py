@@ -5,22 +5,22 @@ import random
 import time
 
 '''
-TODO: ensure ring suppression
+TODO: ensure suppression of prime in second experiment
 '''
 
 PATH_TO_MONDRIANS = 'Mondrians/newColors/'
 PATH_TO_STIMULI = 'ColorStimuli/'
-OUTPUT_FILE = open('colorPrefData/testAug1.txt', 'a')
+OUTPUT_FILE = open('colorPrefData/pracAug8.txt', 'a')
 CENTER_DIST = 0.4  # positive for right-eye dominant, negative for left-eye dominant
 YPOS = 0.1
 LEFT_SHIFT = 0.055
 TEXT_SIZE = 0.038
 REFRESH_RATE = 60  # in Hz
-FIRST_STAGE_REPETITIONS = 15 # per color + side combination
-SECOND_STAGE_REPETITIONS = 5  # per layout 
+FIRST_STAGE_REPETITIONS = 0 # per color + side combination
+SECOND_STAGE_REPETITIONS = 10  # per layout 
 
 colorsToTest = [(27, 0, 0), (12, 6, 0), (8, 8, 0), (0, 10, 0), (0, 0, 90), (24, 0, 24)]
-tweak = 0.3
+tweak = 0.4
 for i, color in enumerate(colorsToTest):
     colorsToTest[i] = (int(round(color[0] * tweak)), int(round(color[1] * tweak)), int(round(color[2] * tweak)))
                 
@@ -115,36 +115,6 @@ stimR1 = visual.GratingStim(win, size=(0.018, 0.018 * ASPECT_RATIO), pos=(CENTER
                             colorSpace='rgb255', tex=None, mask=crss.msk)
 stimR2 = visual.GratingStim(win, size=(0.018, 0.018 * ASPECT_RATIO), pos=(CENTER_DIST + 0.068, YPOS),
                             colorSpace='rgb255', tex=None, mask=crss.msk)
-'''
-upperHalfL = visual.GratingStim(win, size=(0.24, 0.12 * ASPECT_RATIO), pos=(-CENTER_DIST, 0.11 + YPOS + LEFT_SHIFT), 
-                                color='darkturquoise', tex=None, mask='gauss')
-lowerHalfL = visual.GratingStim(win, size=(0.24, 0.12 * ASPECT_RATIO), pos=(-CENTER_DIST, -0.11 + YPOS + LEFT_SHIFT), 
-                                color='darkturquoise', tex=None, mask='gauss')
-upperHalfR = visual.GratingStim(win, size=(0.24, 0.12 * ASPECT_RATIO), pos=(CENTER_DIST, 0.11 + YPOS), 
-                                color='darkturquoise', tex=None, mask='gauss')
-lowerHalfR = visual.GratingStim(win, size=(0.24, 0.12 * ASPECT_RATIO), pos=(CENTER_DIST, -0.11 + YPOS), 
-                                color='darkturquoise', tex=None, mask='gauss')
-upSelected, downSelected = False, False
-    while True:
-        drawBackground()
-        if upSelected:
-            upperHalfL.draw()
-            upperHalfR.draw()
-        if downSelected:
-            lowerHalfL.draw()
-            lowerHalfR.draw()
-        questionL.draw()
-        questionR.draw()
-        win.flip()
-        answer = event.waitKeys(keyList=['up', 'down', 'space'])
-        if answer[0] == 'up':
-            upSelected = not upSelected
-        elif answer[0] == 'down':
-            downSelected = not downSelected
-        elif answer[0] == 'space':
-            break
-    return (upSelected, downSelected)
-'''
 
 # Confirmation Text
 confL = visual.TextStim(win, height=TEXT_SIZE, wrapWidth=0.23, 
@@ -162,10 +132,7 @@ for i, color in enumerate(colorsToTest):
     ranks[color] = visual.TextStim(win, height=TEXT_SIZE, pos=(hPos, 0.12), text='_')
 indicator = visual.Rect(win, lineColor='white', fillColor='black', size=(0.12, 0.225 * ASPECT_RATIO), 
                            pos=(-(len(colorsToTest) - 1) / 2.0 * 0.1, 0.175))
-instructions = visual.TextStim(win, pos=(0, 0.4), height=TEXT_SIZE, wrapWidth = 0.8,
-                               text='Enter your preference ranking (1 for most favorite, 6 for least ' + \
-                                    'favorite) for the indicated color. Use the arrow keys to move the ' + \
-                                    'indicator around. The experiment will continue once all 6 colors have been ranked.')
+instructions = visual.TextStim(win, pos=(0, 0.4), height=TEXT_SIZE, wrapWidth = 0.8)
 flickerer = visual.Circle(win, pos=(0, 0.1), size=(0.18, 0.18 * ASPECT_RATIO), 
                           fillColorSpace='rgb255', lineColorSpace='rgb255')                                   
 sliderBar = visual.Line(win, start=(-0.3, -0.2), end=(0.3, -0.2), lineColor='gray')
@@ -301,6 +268,9 @@ def recordPreference(colors):
     Records subject's preference ranking for each color and writes to a text file. 
     Returns tuple of (most favorite color, least favorite color).
     '''
+    instructions.text = 'Enter your preference ranking (1 for most favorite, 6 for least ' + \
+                        'favorite) for the indicated color. Use the arrow keys to move the ' + \
+                        'indicator around. The experiment will continue once all 6 colors have been ranked.'
     indicator.autoDraw = True
     for color in colorsToTest:
         circles[color].autoDraw = True
@@ -436,62 +406,12 @@ def equiluminanceAlt(color1, color2):
     OUTPUT_FILE.write('equiluminantColor: ' + str(temp2).replace(' ', '') + '\n') 
     return (color1, temp2)
 
-def rotatedSineTexture(degrees):
-    '''Returns numpy array of grating texture rotated from vertical by given amount of degrees.'''
-    tex1 = np.zeros((256, 256))
-    slope = np.arctan(degrees * np.pi / 180)  # gabor is rotated by degree amount in layout
-    for y in range(256):
-        for x in range(256):
-            dist = (-slope * (y - 128) + (x - 128)) / np.sqrt(1 + slope ** 2)
-            val1 = np.cos(dist * 2.0 * np.pi / 256 * 4)  # spatial frequency (sine periods)      
-            tex1[y][x] = val1
-    return tex1
-
-def calibrateDifficulty():
-    '''
-    Returns tilt of gabor patch such that orientation task accuracy is around 75%. 
-    Staircases down from 5 degrees and then up from 1 degree, then averages results.
-    '''
-    def tiltStaircase(tilt, loweringTilt):
-        for reversal in range(10):
-            correctStreak = 0
-            while True:               
-                gabor.pos = (-CENTER_DIST, YPOS + (np.random.randint(0, 2) - 0.5) * 0.24 + LEFT_SHIFT)
-                dir = (np.random.randint(0, 2) - 0.5) * 2.0
-                gabor.tex = rotatedSineTexture(tilt * dir)
-                waitForReady(True)
-                waitPeriod = np.random.randint(REFRESH_RATE / 2, REFRESH_RATE + 1)
-                for frameN in range(waitPeriod):
-                    drawBackground()
-                    win.flip()
-                for frameN in range(REFRESH_RATE / 5):
-                    drawBackground()
-                    gabor.draw()
-                    win.flip()
-                passedTask = askForLocation(dir, True)
-                showConfirmation()
-                if passedTask:
-                    correctStreak += 1
-                    if correctStreak == 3:
-                        correctStreak = 0
-                        if abs(tilt) > 0.1:
-                            tilt -= 0.5
-                            if not loweringTilt:
-                                loweringTilt = True
-                                break
-                else:
-                    correctStreak = 0
-                    tilt += 0.5
-                    if loweringTilt:
-                        loweringTilt = False
-                        break
-        return tilt
-    tilt1 = tiltStaircase(5.0, True)
-    return (tilt1 + tiltStaircase(1.0, False)) / 2.0
-
-def drawWarning():
-    '''Warns the subject that second experiment is about to begin and waits for ready.'''
-    instructions.text = "Press the 'x' key when you are ready to begin session 2."
+def drawWarning(isSecondStage):
+    '''Warns the subject that the next stage is about to begin and waits for ready.'''
+    if isSecondStage:
+        instructions.text = "The practice period has ended. Press the 'x' key when you are ready to begin stage 3."
+    else:
+        instructions.text = "Stage 1 has been completed. Press the 'x' key when you are ready to begin stage 2."
     instructions.draw()
     win.flip()
     event.waitKeys(keyList=['x'])
@@ -511,7 +431,7 @@ def ringPrime(stimColor, ringColor, popLoc):
     primingRing.colors = ringColor
     primingRing.fieldPos = (-CENTER_DIST, YPOS + LEFT_SHIFT)
     mondN = 0
-    for frameN in range(int(2.5 * REFRESH_RATE)):  
+    for frameN in range(int(2.3 * REFRESH_RATE)):  
         if int(frameN % (REFRESH_RATE / 10.0)) == 0:  # change mondrian 10 times per second
             mondN += 1            
             if mondN > 9:  # there are 10 mondrians to cycle through
@@ -524,7 +444,7 @@ def ringPrime(stimColor, ringColor, popLoc):
             if cycleProgress >= 3 and cycleProgress < REFRESH_RATE / 5 + 3:
                 stim.opacity = (cycleProgress - 2) / (REFRESH_RATE / 5.0 + .01)
                 primingRing.opacities = stim.opacity
-                primingRing.draw()
+                #primingRing.draw()
                 stim.draw()
         rightFixBorder.draw()
         rightFix1.draw()
@@ -543,8 +463,8 @@ def askVisible():
     Returns subjective visibility level (0, 1, or 2) as an integer.
     '''
     event.clearEvents()
-    questionL.text = 'Did you see any circles with crosses?'
-    questionR.text = 'Did you see any circles with crosses?'
+    questionL.text = 'Did you see any color patches?'
+    questionR.text = 'Did you see any color patches?'
     current = 0
     while True:
         indicatorL.pos = (-CENTER_DIST, -current * 0.045 + YPOS - 0.045 + LEFT_SHIFT)
@@ -569,18 +489,12 @@ def askVisible():
 def askLocationsSeen(claimedVisible):
     '''Lets the subject select areas in which they saw patches and returns selections.'''
     event.clearEvents()
-    if claimedVisible:
+    if claimedVisible or not claimedVisible:
         questionL.text = 'Location?\n'
         questionR.text = 'Location?\n'
-        choicesL.text = '      Top    (up)\n\n    Both    (space)\n\nBottom    (down)'
-        choicesR.text = '      Top    (up)\n\n    Both    (space)\n\nBottom    (down)'
-        keys = ['up', 'down', 'space']
-    else:
-        questionL.text = 'Two colors?'
-        questionR.text = 'Two colors?'
-        choicesL.text = '      Top (up)\n\nBottom (down)'
-        choicesR.text = '      Top (up)\n\nBottom (down)'
-        keys = ['up', 'down']   
+        choicesL.text = '      Top    (up)\n\n\n\nBottom    (down)'
+        choicesR.text = '      Top    (up)\n\n\n\nBottom    (down)'
+        keys = ['up', 'down']  
     drawBackground()
     questionL.draw()
     choicesL.draw()
@@ -591,7 +505,7 @@ def askLocationsSeen(claimedVisible):
     return answer[0]   
     
 def askColorSeen(color1, color2):
-    '''Draws the question asking what suppressed colors were seen and waits for subject to answer.'''
+    '''CURRENTLY UNUSED: Draws the question asking what suppressed colors were seen and waits for subject to answer.'''
     event.clearEvents()
     stimL1.color = color1
     stimL2.color = color2
@@ -613,8 +527,19 @@ def askColorSeen(color1, color2):
     win.flip()
     answer = event.waitKeys(keyList=['left', 'right', 'space'])
     return answer[0]
+
+def rotatedSineTexture(degrees):
+    '''Returns numpy array of grating texture rotated from vertical by given amount of degrees.'''
+    tex1 = np.zeros((256, 256))
+    slope = np.arctan(degrees * np.pi / 180)  # gabor is rotated by degree amount in layout
+    for y in range(256):
+        for x in range(256):
+            dist = (-slope * (y - 128) + (x - 128)) / np.sqrt(1 + slope ** 2)
+            val1 = np.cos(dist * 2.0 * np.pi / 256 * 4)  # spatial frequency (sine periods)      
+            tex1[y][x] = val1
+    return tex1
     
-def orientationTask(color1, color2, layout):  
+def orientationTask(color1, color2, layout, isCalibrating):  
     '''
     Runs a full trial of measuring the speed of performing an orientation task
     after a pop-out prime of the given colors at the location determined by
@@ -623,19 +548,14 @@ def orientationTask(color1, color2, layout):
     Layout tuple format: 
     (color of the popout cross, location (top or bottom) of popout, location of gabor, clockwise tilt of gabor)
     '''
-    tex1 = rotatedSineTexture(abs(layout[3]))
-    tex2 = rotatedSineTexture(-abs(layout[3]))
+    gabor.pos = (-CENTER_DIST, YPOS + layout[2] + LEFT_SHIFT)
+    gabor.tex = rotatedSineTexture(layout[3]) 
     waitForReady(True)
     if layout[0] == 1:
         primeVisible = ringPrime(color1, color2, layout[1])
     else:
         primeVisible = ringPrime(color2, color1, layout[1])
     if not primeVisible:
-        gabor.pos = (-CENTER_DIST, YPOS + layout[2] + LEFT_SHIFT)
-        if layout[3] > 0:
-            gabor.tex = tex1
-        else:
-            gabor.tex = tex2        
         startTime = time.time()
         for frameN in range(int(REFRESH_RATE / 5)):
             drawBackground()
@@ -644,13 +564,45 @@ def orientationTask(color1, color2, layout):
         passedTask = askForLocation(layout[3], True) 
         responseTime = time.time() - startTime
         visibility = askVisible()
-        OUTPUT_FILE.write(str(layout) + ' ' + str(responseTime) + ' ' + str(passedTask) + ' ' + str(visibility) + 
-                          ' ' + str(askLocationsSeen(bool(visibility))))
-        if visibility > 0:
-            OUTPUT_FILE.write(' ' + askColorSeen(color1, color2))
-        OUTPUT_FILE.write('\n')
+        visibleLoc = askLocationsSeen(bool(visibility))
+        if not isCalibrating:
+            OUTPUT_FILE.write(str(layout) + ' ' + str(responseTime) + ' ' + str(passedTask) + ' ' + str(visibility) + 
+                              ' ' + str(visibleLoc) + '\n')
         event.clearEvents()
     showConfirmation()
+    return passedTask
+    
+def calibrateDifficulty(color1, color2, yDist):
+    '''
+    Returns tilt of gabor patch such that orientation task accuracy is around 75%. 
+    Staircases down from 5 degrees and then up from 1 degree, then averages results.
+    '''
+    def tiltStaircase(tilt, loweringTilt):
+        for reversal in range(10):
+            correctStreak = 0
+            while True:               
+                popLoc = (np.random.randint(0, 2) - 0.5) * 2.0 * yDist
+                gabLoc = (np.random.randint(0, 2) - 0.5) * 2.0 * yDist
+                dir = (np.random.randint(0, 2) - 0.5) * 2.0
+                passedTask = orientationTask(color1, color2, (np.random.randint(1, 3), popLoc, gabLoc, tilt * dir), True)
+                if passedTask:
+                    correctStreak += 1
+                    if correctStreak == 3:
+                        correctStreak = 0
+                        if abs(tilt) > 0.1:
+                            tilt -= 0.5
+                            if not loweringTilt:
+                                loweringTilt = True
+                                break
+                else:
+                    correctStreak = 0
+                    tilt += 0.5
+                    if loweringTilt:
+                        loweringTilt = False
+                        break
+        return tilt
+    tilt1 = tiltStaircase(10.0, True)
+    return (tilt1 + tiltStaircase(1.0, False)) / 2.0
     
 def showEndMsg():
     '''Displays message signifying the end of the experiment and waits for quit.'''
@@ -668,6 +620,7 @@ if __name__ == '__main__':
     for color in colorsToTest:
         for stimLoc in [-0.0625, 0.0625]:
             layouts.append((color, stimLoc))
+
     trialOrder = []
     for i in range(len(layouts)):
         trialOrder += [i] * FIRST_STAGE_REPETITIONS
@@ -676,10 +629,12 @@ if __name__ == '__main__':
         circleBreakingTime(layouts[layoutN][0], layouts[layoutN][1], True, True)
     OUTPUT_FILE.write('END1\n')
         
+    drawWarning(False)
     extremes = recordPreference(colorsToTest)
     newColors = equiluminanceAlt(extremes[0], extremes[1])
-    tiltMag = calibrateDifficulty()
+    tiltMag = calibrateDifficulty(newColors[0], newColors[1], ringRadius)
     print "Optimal tilt magnitude calibrated to be: " + str(tiltMag) + " degrees..."
+    print "Conducting experiment 2 using the following colors: " + str(newColors)
     
     OUTPUT_FILE.write('START2\n')
     # All possible trial configurations for second experiment
@@ -693,9 +648,9 @@ if __name__ == '__main__':
     for i in range(len(layouts)):
         trialOrder += [i] * SECOND_STAGE_REPETITIONS
     np.random.shuffle(trialOrder)
-    drawWarning()
+    drawWarning(True)
     for layoutN in trialOrder:
-        orientationTask(newColors[0], newColors[1], layouts[layoutN])
+        orientationTask(newColors[0], newColors[1], layouts[layoutN], False)
     OUTPUT_FILE.write('END2\n')
     showEndMsg()
     
