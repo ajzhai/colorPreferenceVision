@@ -5,18 +5,18 @@ import random
 import time
 
 '''
-TODO: ensure suppression of prime in second experiment
+TODO: finalize calibration procedure -- should it be 4x6 or 4x8 or still 2x10?
 '''
 
 PATH_TO_MONDRIANS = 'Mondrians/newColors/'
 PATH_TO_STIMULI = 'ColorStimuli/'
-OUTPUT_FILE = open('colorPrefData/pracAug8.txt', 'a')
+OUTPUT_FILE = open('colorPrefData/pracAug10.txt', 'a')
 CENTER_DIST = 0.4  # positive for right-eye dominant, negative for left-eye dominant
 YPOS = 0.1
 LEFT_SHIFT = 0.055
 TEXT_SIZE = 0.038
 REFRESH_RATE = 60  # in Hz
-FIRST_STAGE_REPETITIONS = 0 # per color + side combination
+FIRST_STAGE_REPETITIONS = 15 # per color + side combination
 SECOND_STAGE_REPETITIONS = 10  # per layout 
 
 colorsToTest = [(27, 0, 0), (12, 6, 0), (8, 8, 0), (0, 10, 0), (0, 0, 90), (24, 0, 24)]
@@ -135,7 +135,7 @@ indicator = visual.Rect(win, lineColor='white', fillColor='black', size=(0.12, 0
 instructions = visual.TextStim(win, pos=(0, 0.4), height=TEXT_SIZE, wrapWidth = 0.8)
 flickerer = visual.Circle(win, pos=(0, 0.1), size=(0.18, 0.18 * ASPECT_RATIO), 
                           fillColorSpace='rgb255', lineColorSpace='rgb255')                                   
-sliderBar = visual.Line(win, start=(-0.3, -0.2), end=(0.3, -0.2), lineColor='gray')
+sliderBar = visual.Line(win, start=(-0.15, -0.2), end=(0.15, -0.2), lineColor='gray')
 
 # Minimum Motion
 msk1 = np.ones((256, 256))
@@ -368,7 +368,7 @@ def equiluminanceAlt(color1, color2):
                         " the pattern's movement seems to change direction, press space to continue."    
     temp2 = multiplyTuple(color2, scaleFactor / origScale)
     framesPerCycle = REFRESH_RATE / 3
-    scaleStep = 0.1
+    scaleStep = 0.05
     global msk1, msk2
     while not event.getKeys(keyList=['space']):
         for frameN in range(framesPerCycle):
@@ -388,12 +388,12 @@ def equiluminanceAlt(color1, color2):
             win.flip()                         
             input = event.getKeys(keyList=['left', 'right'])
             if input and input[0] == 'left':
-                if scaleFactor > scaleStep:
+                if scaleFactor > 0.25:
                     scaleFactor -= scaleStep
                     indicator.pos = (-0.3 + scaleFactor * 0.6, -0.2)
                 temp2 = multiplyTuple(color2, scaleFactor / origScale)
             elif input and input[0] == 'right':
-                if scaleFactor < 1 - scaleStep:
+                if scaleFactor < 0.75:
                     scaleFactor += scaleStep
                     indicator.pos = (-0.3 + scaleFactor * 0.6, -0.2)
                 temp2 = multiplyTuple(color2, scaleFactor / origScale)
@@ -539,7 +539,7 @@ def rotatedSineTexture(degrees):
             tex1[y][x] = val1
     return tex1
     
-def orientationTask(color1, color2, layout, isCalibrating):  
+def orientationTask(color1, color2, layout):  
     '''
     Runs a full trial of measuring the speed of performing an orientation task
     after a pop-out prime of the given colors at the location determined by
@@ -565,9 +565,8 @@ def orientationTask(color1, color2, layout, isCalibrating):
         responseTime = time.time() - startTime
         visibility = askVisible()
         visibleLoc = askLocationsSeen(bool(visibility))
-        if not isCalibrating:
-            OUTPUT_FILE.write(str(layout) + ' ' + str(responseTime) + ' ' + str(passedTask) + ' ' + str(visibility) + 
-                              ' ' + str(visibleLoc) + '\n')
+        OUTPUT_FILE.write(str(layout) + ' ' + str(responseTime) + ' ' + str(passedTask) + ' ' + str(visibility) + 
+                          ' ' + str(visibleLoc) + '\n')
         event.clearEvents()
     showConfirmation()
     return passedTask
@@ -584,7 +583,7 @@ def calibrateDifficulty(color1, color2, yDist):
                 popLoc = (np.random.randint(0, 2) - 0.5) * 2.0 * yDist
                 gabLoc = (np.random.randint(0, 2) - 0.5) * 2.0 * yDist
                 dir = (np.random.randint(0, 2) - 0.5) * 2.0
-                passedTask = orientationTask(color1, color2, (np.random.randint(1, 3), popLoc, gabLoc, tilt * dir), True)
+                passedTask = orientationTask(color1, color2, (np.random.randint(1, 3), popLoc, gabLoc, tilt * dir))
                 if passedTask:
                     correctStreak += 1
                     if correctStreak == 3:
@@ -600,7 +599,9 @@ def calibrateDifficulty(color1, color2, yDist):
                     if loweringTilt:
                         loweringTilt = False
                         break
+            OUTPUT_FILE.write('REV' + str(reversal) + '\n')
         return tilt
+    OUTPUT_FILE.write('CALIB\n')
     tilt1 = tiltStaircase(10.0, True)
     return (tilt1 + tiltStaircase(1.0, False)) / 2.0
     
@@ -650,7 +651,7 @@ if __name__ == '__main__':
     np.random.shuffle(trialOrder)
     drawWarning(True)
     for layoutN in trialOrder:
-        orientationTask(newColors[0], newColors[1], layouts[layoutN], False)
+        orientationTask(newColors[0], newColors[1], layouts[layoutN])
     OUTPUT_FILE.write('END2\n')
     showEndMsg()
     
