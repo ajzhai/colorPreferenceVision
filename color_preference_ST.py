@@ -10,13 +10,13 @@ TODO: finalize calibration procedure -- should it be 4x6 or 4x8 or still 2x10?
 
 PATH_TO_MONDRIANS = 'Mondrians/newColors/'
 PATH_TO_STIMULI = 'ColorStimuli/'
-OUTPUT_FILE = open('colorPrefData/pracAug10.txt', 'a')
+OUTPUT_FILE = open('colorPrefData/expAug13.txt', 'a')
 CENTER_DIST = 0.4  # positive for right-eye dominant, negative for left-eye dominant
 YPOS = 0.1
 LEFT_SHIFT = 0.055
 TEXT_SIZE = 0.038
 REFRESH_RATE = 60  # in Hz
-FIRST_STAGE_REPETITIONS = 15 # per color + side combination
+FIRST_STAGE_REPETITIONS = 0 # per color + side combination
 SECOND_STAGE_REPETITIONS = 10  # per layout 
 
 colorsToTest = [(27, 0, 0), (12, 6, 0), (8, 8, 0), (0, 10, 0), (0, 0, 90), (24, 0, 24)]
@@ -388,7 +388,7 @@ def equiluminanceAlt(color1, color2):
             win.flip()                         
             input = event.getKeys(keyList=['left', 'right'])
             if input and input[0] == 'left':
-                if scaleFactor > 0.25:
+                if scaleFactor > 0.251:
                     scaleFactor -= scaleStep
                     indicator.pos = (-0.3 + scaleFactor * 0.6, -0.2)
                 temp2 = multiplyTuple(color2, scaleFactor / origScale)
@@ -576,34 +576,61 @@ def calibrateDifficulty(color1, color2, yDist):
     Returns tilt of gabor patch such that orientation task accuracy is around 75%. 
     Staircases down from 5 degrees and then up from 1 degree, then averages results.
     '''
-    def tiltStaircase(tilt, loweringTilt):
-        for reversal in range(10):
-            correctStreak = 0
-            while True:               
-                popLoc = (np.random.randint(0, 2) - 0.5) * 2.0 * yDist
-                gabLoc = (np.random.randint(0, 2) - 0.5) * 2.0 * yDist
-                dir = (np.random.randint(0, 2) - 0.5) * 2.0
-                passedTask = orientationTask(color1, color2, (np.random.randint(1, 3), popLoc, gabLoc, tilt * dir))
-                if passedTask:
-                    correctStreak += 1
-                    if correctStreak == 3:
-                        correctStreak = 0
-                        if abs(tilt) > 0.1:
-                            tilt -= 0.5
-                            if not loweringTilt:
-                                loweringTilt = True
-                                break
-                else:
-                    correctStreak = 0
-                    tilt += 0.5
-                    if loweringTilt:
-                        loweringTilt = False
-                        break
-            OUTPUT_FILE.write('REV' + str(reversal) + '\n')
-        return tilt
+    class tiltStaircase:
+        def __init__(self, startTilt, isLowering):
+            self.tilt = startTilt
+            self.reversalsLeft = 8
+            self.loweringTilt = isLowering
+            self.revTilts = []
+            self.correctStreak = 0
+            
+        def endReversal(self):
+            self.reversalsLeft -= 1
+            self.revTilts.append(self.tilt)
+            
+            self.correctStreak = 0
+            OUTPUT_FILE.write('REV' + str(7 - self.reversalsLeft) + '\n')
+            
+        def runTrial(self):
+            popLoc = (np.random.randint(0, 2) - 0.5) * 2.0 * yDist
+            gabLoc = (np.random.randint(0, 2) - 0.5) * 2.0 * yDist
+            dir = (np.random.randint(0, 2) - 0.5) * 2.0
+            passedTask = orientationTask(color1, color2, (np.random.randint(1, 3), popLoc, gabLoc, self.tilt * dir))
+            if passedTask:
+                self.correctStreak += 1
+                if self.correctStreak == 3:
+                    self.correctStreak = 0
+                    if abs(self.tilt) > 0.1:
+                        self.tilt -= 0.5
+                        if not self.loweringTilt:
+                            self.loweringTilt = True
+                            self.endReversal()
+            else:
+                self.correctStreak = 0
+                self.tilt += 0.5
+                if self.loweringTilt:
+                    self.loweringTilt = False
+                    self.endReversal()
+                    
     OUTPUT_FILE.write('CALIB\n')
-    tilt1 = tiltStaircase(10.0, True)
-    return (tilt1 + tiltStaircase(1.0, False)) / 2.0
+    stair1 = tiltStaircase(10.0, True)
+    stair2 = tiltStaircase(1.0, False)
+    while stair1.reversalsLeft > 0 or stair2.reversalsLeft > 0:
+        if stair1.reversalsLeft == 0:
+            OUTPUT_FILE.write('1 ')
+            stair2.runTrial()
+        elif stair2.reversalsLeft == 0:
+            OUTPUT_FILE.write('0 ')
+            stair1.runTrial()
+        else:
+            stair = np.random.randint(0, 2)
+            OUTPUT_FILE.write(str(stair) + ' ')
+            if stair == 0:
+                stair1.runTrial()
+            elif stair == 1:
+                stair2.runTrial()
+    
+    return (np.mean(stair1.revTilts) + np.mean(stair2.revTilts)) / 2.0
     
 def showEndMsg():
     '''Displays message signifying the end of the experiment and waits for quit.'''
