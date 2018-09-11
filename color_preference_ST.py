@@ -10,17 +10,18 @@ TODO: finalize calibration procedure -- should it be 4x6 or 4x8 or still 2x10?
 
 PATH_TO_MONDRIANS = 'Mondrians/newColors/'
 PATH_TO_STIMULI = 'ColorStimuli/'
-OUTPUT_FILE = open('colorPrefData/expAug13.txt', 'a')
-CENTER_DIST = 0.4  # positive for right-eye dominant, negative for left-eye dominant
+OUTPUT_FILE = open('colorPrefData/expData27.txt', 'a')
+CENTER_DIST = -0.33  # positive for right-eye dominant, negative for left-eye dominant
 YPOS = 0.1
-LEFT_SHIFT = 0.055
+LEFT_SHIFT = -0.055
 TEXT_SIZE = 0.038
 REFRESH_RATE = 60  # in Hz
-FIRST_STAGE_REPETITIONS = 0 # per color + side combination
+FIRST_STAGE_REPETITIONS = 15 # per color + side combination
 SECOND_STAGE_REPETITIONS = 10  # per layout 
+STAIRCASE_REVERSALS = 12
 
 colorsToTest = [(27, 0, 0), (12, 6, 0), (8, 8, 0), (0, 10, 0), (0, 0, 90), (24, 0, 24)]
-tweak = 0.4
+tweak = 1.0
 for i, color in enumerate(colorsToTest):
     colorsToTest[i] = (int(round(color[0] * tweak)), int(round(color[1] * tweak)), int(round(color[2] * tweak)))
                 
@@ -80,7 +81,7 @@ stim = visual.GratingStim(win, size=(0.018, 0.018 * ASPECT_RATIO),
                        
 # Suppressed Priming Ring of Crosses
 ringXY = []
-ringRadius = 0.12  # vertical
+ringRadius = 0.1  # vertical
 for ang in np.arange(0.75, 2.75, .25):
     ringXY.append((ringRadius / ASPECT_RATIO * np.cos(ang * np.pi), ringRadius * np.sin(ang * np.pi)))
 primingRing = visual.ElementArrayStim(win, fieldPos=(-CENTER_DIST, YPOS + LEFT_SHIFT), sizes=(0.018, 0.018 * ASPECT_RATIO), 
@@ -88,7 +89,7 @@ primingRing = visual.ElementArrayStim(win, fieldPos=(-CENTER_DIST, YPOS + LEFT_S
                                       
 # Orientation Task Gabor
 gabor = visual.GratingStim(win, mask="gauss", size=[0.024, 0.024 * ASPECT_RATIO], 
-                           pos=(-CENTER_DIST, 0.12 + YPOS + LEFT_SHIFT))
+                           pos=(-CENTER_DIST, 0.1 + YPOS + LEFT_SHIFT))
                                       
 # Location Task Text
 questionL = visual.TextStim(win, pos=(-CENTER_DIST, 0.14 + YPOS + LEFT_SHIFT), height=TEXT_SIZE, wrapWidth=0.23,
@@ -232,8 +233,8 @@ def circleBreakingTime(color, stimLoc, askLocation, blinking):
     breakingTime = 99999
     startTime = time.time()
     for frameN in range(int(10.8 * REFRESH_RATE)):  # want to allow up to 10 seconds, last display is for finding bad subjects
-        if frameN <= 6 * REFRESH_RATE:
-            stim.opacity = frameN / (6.0 * REFRESH_RATE)
+        if frameN <= 3.0 * REFRESH_RATE:
+            stim.opacity = frameN / (3.0 * REFRESH_RATE)
         drawBackground()
         if int(frameN % (REFRESH_RATE / 10.0)) == 0:  # change mondrian 10 times per second
             mondN += 1
@@ -557,7 +558,7 @@ def orientationTask(color1, color2, layout):
         primeVisible = ringPrime(color2, color1, layout[1])
     if not primeVisible:
         startTime = time.time()
-        for frameN in range(int(REFRESH_RATE / 5)):
+        for frameN in range(int(REFRESH_RATE * 2)):
             drawBackground()
             gabor.draw()
             win.flip()
@@ -567,6 +568,7 @@ def orientationTask(color1, color2, layout):
         visibleLoc = askLocationsSeen(bool(visibility))
         OUTPUT_FILE.write(str(layout) + ' ' + str(responseTime) + ' ' + str(passedTask) + ' ' + str(visibility) + 
                           ' ' + str(visibleLoc) + '\n')
+        print str(layout) + ' ' + str(responseTime) + ' ' + str(passedTask) + ' ' + str(visibility) + ' ' + str(visibleLoc)
         event.clearEvents()
     showConfirmation()
     return passedTask
@@ -579,7 +581,7 @@ def calibrateDifficulty(color1, color2, yDist):
     class tiltStaircase:
         def __init__(self, startTilt, isLowering):
             self.tilt = startTilt
-            self.reversalsLeft = 8
+            self.reversalsLeft = STAIRCASE_REVERSALS
             self.loweringTilt = isLowering
             self.revTilts = []
             self.correctStreak = 0
@@ -587,9 +589,9 @@ def calibrateDifficulty(color1, color2, yDist):
         def endReversal(self):
             self.reversalsLeft -= 1
             self.revTilts.append(self.tilt)
-            
             self.correctStreak = 0
-            OUTPUT_FILE.write('REV' + str(7 - self.reversalsLeft) + '\n')
+            print str(self.reversalsLeft) + ' reversals left, ' + str(self.tilt) + ' degrees'
+            OUTPUT_FILE.write('REV' + str(STAIRCASE_REVERSALS - 1 - self.reversalsLeft) + '\n')
             
         def runTrial(self):
             popLoc = (np.random.randint(0, 2) - 0.5) * 2.0 * yDist
@@ -613,7 +615,7 @@ def calibrateDifficulty(color1, color2, yDist):
                     self.endReversal()
                     
     OUTPUT_FILE.write('CALIB\n')
-    stair1 = tiltStaircase(10.0, True)
+    stair1 = tiltStaircase(6.0, True)
     stair2 = tiltStaircase(1.0, False)
     while stair1.reversalsLeft > 0 or stair2.reversalsLeft > 0:
         if stair1.reversalsLeft == 0:
@@ -629,8 +631,7 @@ def calibrateDifficulty(color1, color2, yDist):
                 stair1.runTrial()
             elif stair == 1:
                 stair2.runTrial()
-    
-    return (np.mean(stair1.revTilts) + np.mean(stair2.revTilts)) / 2.0
+    return (np.mean(stair1.revTilts[STAIRCASE_REVERSALS / 2:]) + np.mean(stair2.revTilts[STAIRCASE_REVERSALS / 2:])) / 2.0
     
 def showEndMsg():
     '''Displays message signifying the end of the experiment and waits for quit.'''
@@ -653,16 +654,20 @@ if __name__ == '__main__':
     for i in range(len(layouts)):
         trialOrder += [i] * FIRST_STAGE_REPETITIONS
     np.random.shuffle(trialOrder)
+    progress = 0
     for layoutN in trialOrder:
         circleBreakingTime(layouts[layoutN][0], layouts[layoutN][1], True, True)
+        progress += 1
+        if progress % 20 == 0:
+            print 'Trial ' + str(progress) + ' done'
     OUTPUT_FILE.write('END1\n')
         
     drawWarning(False)
     extremes = recordPreference(colorsToTest)
     newColors = equiluminanceAlt(extremes[0], extremes[1])
+    print "Conducting experiment 2 using the following colors: " + str(newColors)
     tiltMag = calibrateDifficulty(newColors[0], newColors[1], ringRadius)
     print "Optimal tilt magnitude calibrated to be: " + str(tiltMag) + " degrees..."
-    print "Conducting experiment 2 using the following colors: " + str(newColors)
     
     OUTPUT_FILE.write('START2\n')
     # All possible trial configurations for second experiment
@@ -676,9 +681,13 @@ if __name__ == '__main__':
     for i in range(len(layouts)):
         trialOrder += [i] * SECOND_STAGE_REPETITIONS
     np.random.shuffle(trialOrder)
-    drawWarning(True)
+    #drawWarning(True)
+    progress = 0
     for layoutN in trialOrder:
         orientationTask(newColors[0], newColors[1], layouts[layoutN])
+        progress += 1
+        if progress % 20 == 0:
+            print 'Trial ' + str(progress) + ' done'
     OUTPUT_FILE.write('END2\n')
     showEndMsg()
     
